@@ -5,7 +5,7 @@ if [ "$(id -u)" -ne 0 ]; then
   echo "当前用户不是 root，正在切换到 root 用户..."
   
   # 使用预设的 root 密码来自动切换为 root 并执行脚本
-  root_password="your_root_password"
+  root_password="rPu%Z3)U'&nu9G%29xgATat&QR[^elPebInD"
   
   # 使用 echo 自动输入 root 密码并执行脚本
   echo $root_password | sudo -S su <<EOF
