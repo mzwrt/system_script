@@ -8,7 +8,7 @@ if [ "$(id -u)" -ne 0 ]; then
   root_password="rPu%Z3)U'&nu9G%29xgATat&QR[^elPebInD"
   
   # 使用 echo 自动输入 root 密码并执行脚本
-  echo $root_password | sudo -S su <<EOF
+  echo $root_password | sudo -S su <<'EOF'
     # 询问新用户名并修改
     echo "请输入新的用户名:"
     read new_user
