@@ -106,7 +106,7 @@ while true; do
 
   # 最后确认
   while true; do
-    echo -n "所有设置已完成，是否确认无误并删除首次登录脚本？[Y/n]: "
+    echo -n "所有设置已完成，是否确认无误并删除首次登录脚本？输入Y将清理所有自定义文件，输入N将重新设置。[Y/n]: "
     read confirm
     case "$confirm" in
       [Yy] )
