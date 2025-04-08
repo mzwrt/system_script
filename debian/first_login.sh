@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# 检查是否是 root 用户，如果不是则使用 sudo su 进行切换
+# 确保脚本在 root 权限下执行
 if [ "$(id -u)" -ne 0 ]; then
   echo "当前用户不是 root，正在切换到 root 用户..."
   
-  # 使用预设的 root 密码来自动切换为 root 并执行脚本
-  root_password="rPu%Z3)U'&nu9G%29xgATat&QR[^elPebInD"
-  
-  # 使用 echo 自动输入 root 密码并执行脚本
-  echo $root_password | sudo -S su <<'EOF'
+  # 从文件中读取 root 密码
+  root_password=$(cat /etc/root_password.txt)
+
+  # 使用 sudo 执行后续命令
+  sudo bash -c '
     # 询问新用户名并修改
     echo "请输入新的用户名:"
     read new_user
@@ -23,6 +23,12 @@ if [ "$(id -u)" -ne 0 ]; then
     usermod -l $new_user jnfyic136dth24st2cqw7ke80m
     groupmod -n $new_user jnfyic136dth24st2cqw7ke80m
 
+    # 确保目标目录不存在
+    if [ -d "/home/$new_user" ]; then
+      echo "目录 /home/$new_user 已存在，无法修改用户名"
+      exit 1
+    fi
+
     # 修改用户主目录
     mv /home/jnfyic136dth24st2cqw7ke80m /home/$new_user
 
@@ -35,7 +41,7 @@ if [ "$(id -u)" -ne 0 ]; then
     # 修改 root 密码
     echo "请输入新的 root 密码:"
     read -s root_password_new
-    echo "$root_password_new" | chpasswd
+    echo "$root_password_new" | passwd root
 
     # 修改新用户密码
     echo "请输入新用户 ($new_user) 密码:"
@@ -48,11 +54,12 @@ if [ "$(id -u)" -ne 0 ]; then
     # 清理首次登录脚本
     rm -f /etc/profile.d/first_login.sh
     rm -f /etc/firstlogin.done
+    rm -f /etc/root_password.txt
 
     # 安装自定义包
-    apt-get clean && apt-get autoclean && apt update -y && apt upgrade -y
+    apt-get clean && apt-get autoclean && apt-get update -y && apt-get upgrade -y
     apt install vim sudo curl wget ufw htop -y
 
     echo "首次登录配置完成。"
-EOF
+  '
 fi
