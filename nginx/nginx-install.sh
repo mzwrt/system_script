@@ -45,8 +45,6 @@ esac
 
 # 安装 Nginx 的函数
 install_nginx() {
-# 创建安装目录和源码目录
-mkdir -p $SRC_DIR
 
 # 安装编译 Nginx 所需的依赖
 echo "安装编译 Nginx 所需的依赖..."
@@ -85,12 +83,11 @@ apt-get install -y \
     liblzma-dev \
     libgeoip-dev \
     libjemalloc-dev \
-    # 安装 Brotli 和 ModSecurity 相关的依赖
     autoconf \
     automake \
     libtool \
     pkg-config \
-    libxml2-dev
+    libxml2-dev || { echo "依赖安装失败，开始卸载..."; uninstall_nginx; exit 1; }
 
 # 获取最新的稳定版 Nginx 版本
 echo "获取最新的稳定版 Nginx 版本..."
@@ -98,11 +95,13 @@ NGINX_VERSION=$(wget -qO- https://nginx.org/en/download.html | grep -oP 'nginx-\
 
 # 下载 Nginx 源码包
 echo "下载 Nginx 源代码..."
-cd $INSTALL_DIR
+cd $NGINX_DIR
 wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz
 
 # 解压源码
 tar -zxvf nginx-${NGINX_VERSION}.tar.gz
+mv nginx-${NGINX_VERSION} nginx
+chown -R root:root $NGINX_DIR/nginx
 rm -f nginx-${NGINX_VERSION}.tar.gz
 
 # 下载并更新所需的模块
@@ -128,8 +127,11 @@ cd $SRC_DIR
 wget https://github.com/chobits/ngx_http_proxy_connect_module/archive/refs/tags/v0.0.7.zip
 unzip v0.0.7.zip
 mv ngx_http_proxy_connect_module-0.0.7 ngx_http_proxy_connect_module
+# 应用补丁
+cd ..
+patch -p1 < src/ngx_http_proxy_connect_module/patch/proxy_connect_rewrite_102101.patch || { echo "ngx_http_proxy_connect_module 补丁应用失败，开始卸载..."; uninstall_nginx; exit 1; }
+cd $SRC_DIR
 rm -f v0.0.7.zip
-
 
 # ngx_brotli 模块（最新稳定版）
 cd $SRC_DIR
@@ -137,6 +139,22 @@ git clone --recursive https://github.com/google/ngx_brotli.git $SRC_DIR/ngx_brot
 cd ngx_brotli
 git submodule update --init
 cd ..
+
+# --with-ld-opt=-ljemalloc 配套程序jemalloc
+cd $SRC_DIR
+jemalloc_version=$(curl -s https://api.github.com/repos/jemalloc/jemalloc/releases/latest | grep '"tag_name":' | cut -d '"' -f 4)
+jemalloc_download_url="https://github.com/jemalloc/jemalloc/releases/download/${jemalloc_version}/jemalloc-${jemalloc_version}.tar.bz2"
+if [ ! -f '/usr/local/lib/libjemalloc.so' ]; then
+        wget -O jemalloc.tar.bz2 "${jemalloc_download_url}"
+        tar -xvf jemalloc.tar.bz2
+        # 这里使用正确的目录名称
+        cd "jemalloc-${jemalloc_version#v}"
+        ./configure
+        make && make install
+        ldconfig
+        cd ..
+        rm -rf jemalloc*
+fi
 
 
 # 获取 OpenSSL 最新稳定版版本号
@@ -329,7 +347,8 @@ find $NGINX_DIR/owasp/owasp-rules/ -type f -exec chmod 600 {} \;
 
 # 配置编译选项
 echo "配置 Nginx 编译选项..."
-cd $INSTALL_DIR/nginx-${NGINX_VERSION}
+chown -R root:root SRC_DIR
+cd $INSTALL_DIR
 ./configure \
   --user=www-data \
   --group=www-data \
@@ -367,11 +386,15 @@ cd $INSTALL_DIR/nginx-${NGINX_VERSION}
 
 # 编译 Nginx
 echo "开始编译 Nginx..."
-make -j"$(nproc)"
+make -j"$(nproc)" || { echo "编译 Nginx 失败，开始卸载..."; uninstall_nginx; exit 1; }
 
 # 安装 Nginx
 echo "安装 Nginx..."
 make install
+############################### 根据modsecurity官方文档定义文件权限 #########################################
+chmod 750 $INSTALL_DIR/modules
+chmod 640 $INSTALL_DIR/modules/ngx_http_modsecurity_module.so
+############################### END #########################################
 
 # 设置 Nginx 服务
 echo "设置 Nginx 服务..."
