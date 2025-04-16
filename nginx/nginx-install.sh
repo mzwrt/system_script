@@ -323,7 +323,7 @@ echo "Downloading crs-setup.conf..."
 if [ -f $OPT_DIR/owasp/owasp-rules/crs-setup.conf ]; then
   mv $OPT_DIR/owasp/owasp-rules/crs-setup.conf $OPT_DIR/owasp/owasp-rules/crs-setup.conf.bak  # 备份旧文件
 fi
-wget -q -O $OPT_DIR/owasp/owasp-rules/crs-setup.conf "https://raw.githubusercontent.com/mzwrt/aapanel-6.8.37-backup/refs/heads/main/ModSecurity/crs-setup.conf"
+wget -q -O $OPT_DIR/owasp/owasp-rules/crs-setup.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/ModSecurity%20/crs-setup.conf"
 
 #
 if [ -f $OPT_DIR/owasp/owasp-rules/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf.example ]; then
@@ -338,28 +338,28 @@ echo "Downloading modsecurity.conf..."
 if [ -f $NGINX_SRC_DIR/ModSecurity/modsecurity.conf ]; then
   mv $NGINX_SRC_DIR/ModSecurity/modsecurity.conf $NGINX_SRC_DIR/ModSecurity/modsecurity.conf.bak  # 备份旧文件
 fi
-wget -q -O $NGINX_SRC_DIR/ModSecurity/modsecurity.conf "https://raw.githubusercontent.com/mzwrt/aapanel-6.8.37-backup/refs/heads/main/ModSecurity/modsecurity.conf"
+wget -q -O $NGINX_SRC_DIR/ModSecurity/modsecurity.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/ModSecurity%20/modsecurity.conf"
 
 # 下载 hosts.deny 文件并备份旧文件（如果存在）
 echo "Downloading modsecurity.conf..."
 if [ -f $OPT_DIR/owasp/conf/hosts.deny ]; then
   mv $OPT_DIR/owasp/conf/hosts.deny $OPT_DIR/owasp/conf/hosts.deny.bak  # 备份旧文件
 fi
-wget -q -O $OPT_DIR/owasp/conf/hosts.deny "https://raw.githubusercontent.com/mzwrt/aapanel-6.8.37-backup/refs/heads/main/ModSecurity/hosts.deny"
+wget -q -O $OPT_DIR/owasp/conf/hosts.deny "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/ModSecurity%20/hosts.deny"
 
 # 下载 hosts.deny 文件并备份旧文件（如果存在）
 echo "Downloading hosts.allow..."
 if [ -f $OPT_DIR/owasp/conf/hosts.allow ]; then
   mv $OPT_DIR/owasp/conf/hosts.allow $OPT_DIR/owasp/conf/hosts.allow.bak  # 备份旧文件
 fi
-wget -q -O $OPT_DIR/owasp/conf/hosts.allow "https://raw.githubusercontent.com/mzwrt/aapanel-6.8.37-backup/refs/heads/main/ModSecurity/hosts.allow"
+wget -q -O $OPT_DIR/owasp/conf/hosts.allow "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/ModSecurity%20/hosts.allow"
 
 # 下载 hosts.deny 文件并备份旧文件（如果存在）
 echo "Downloading main.conf..."
 if [ -f $OPT_DIR/owasp/conf/main.conf ]; then
   mv $OPT_DIR/owasp/conf/main.conf $OPT_DIR/owasp/conf/main.conf.bak  # 备份旧文件
 fi
-wget -q -O $OPT_DIR/owasp/conf/main.conf "https://raw.githubusercontent.com/mzwrt/aapanel-6.8.37-backup/refs/heads/main/ModSecurity/main.conf"
+wget -q -O $OPT_DIR/owasp/conf/main.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/ModSecurity%20/main.conf"
 
 # 规范规则文件权限
 echo " 规范文件权限"
