@@ -119,7 +119,7 @@ rm -f nginx-${NGINX_VERSION}.tar.gz
 
 ########################### 替换 Nginx 版本信息和错误页标签 #######################################
 if [ -n "$nginx_fake_name" ] || [ -n "$nginx_version_number" ]; then
-    # 处理特殊字符
+    # 处理特殊字符，但不替换空格
     nginx_fake_name=$(echo "$nginx_fake_name" | sed 's/[&/\]/\\&/g')
     nginx_version_number=$(echo "$nginx_version_number" | sed 's/[&/\]/\\&/g')
 
@@ -132,25 +132,24 @@ if [ -n "$nginx_fake_name" ] || [ -n "$nginx_version_number" ]; then
 
     # 替换 默认错误页的底部标签
     if [ -n "$nginx_fake_name" ]; then
-        sed -i "s/<hr><center>\" NGINX_VER_BUILD \"<\/center>\" CRLF/<hr><center>\" ${nginx_fake_name} \"<\/center>\" CRLF/" $NGINX_DIR/nginx/src/http/ngx_http_special_response.c
+        sed -i "s/<hr><center>\" NGINX_VER_BUILD \"<\/center>\" CRLF/<hr><center>${nginx_fake_name}<\/center>\" CRLF/" $NGINX_DIR/nginx/src/http/ngx_http_special_response.c
         sed -i "s/<hr><center>nginx<\/center>\" CRLF/<hr><center>${nginx_fake_name}<\/center>\" CRLF/" $NGINX_DIR/nginx/src/http/ngx_http_special_response.c
-        sed -i "s/<hr><center>\" NGINX_VER \"<\/center>\" CRLF/<hr><center>\" ${nginx_fake_name} \"<\/center>\" CRLF/" $NGINX_DIR/nginx/src/http/ngx_http_special_response.c
+        sed -i "s/<hr><center>\" NGINX_VER \"<\/center>\" CRLF/<hr><center>${nginx_fake_name}<\/center>\" CRLF/" $NGINX_DIR/nginx/src/http/ngx_http_special_response.c
     fi
 
     # 替换 整体宏标签
-    # 注释掉是因为不需要替换，用户能获取到的只有server标签和错误页标签显示的名字，根据CIS安全基准这已经足够安全，符合所有安全基准
-    # 如果需要完全隐藏nginx任何地方都不能显示nginx，而是显示你的自定义名可以取消注释
-     if [ -n "$nginx_version_number" ]; then
-         sed -i "s/#define NGINX_VERSION      \".*\"/#define NGINX_VERSION      \"${nginx_version_number}\"/" $NGINX_DIR/nginx/src/core/nginx.h
-     fi
+    # 注释掉替换 NGINX_VERSION，因为这个已经不必要
+    # if [ -n "$nginx_version_number" ]; then
+    #     sed -i "s/#define NGINX_VERSION      \".*\"/#define NGINX_VERSION      \"${nginx_version_number}\"/" $NGINX_DIR/nginx/src/core/nginx.h
+    # fi
 
-     if [ -n "$nginx_fake_name" ]; then
-         sed -i "s/#define NGINX_VER          \"nginx\/\" NGINX_VERSION/#define NGINX_VER          \"${nginx_fake_name}\"/" $NGINX_DIR/nginx/src/core/nginx.h
-     fi
+    # if [ -n "$nginx_fake_name" ]; then
+    #     sed -i "s/#define NGINX_VER          \"nginx\/\" NGINX_VERSION/#define NGINX_VER          \"${nginx_fake_name}\"/" $NGINX_DIR/nginx/src/core/nginx.h
+    # fi
 
     # 输出替换结果
     if [ -n "$nginx_fake_name" ]; then
-        echo "Nginx 伪装名称已设置为: $nginx_fake_name"
+        echo "Nginx 伪装名称已设置为: \"$nginx_fake_name\""
     fi
 
     if [ -n "$nginx_version_number" ]; then
@@ -159,8 +158,6 @@ if [ -n "$nginx_fake_name" ] || [ -n "$nginx_version_number" ]; then
 else
     echo "未输入任何修改信息，文件未做任何更改。"
 fi
-
-
 ################################### 替换nginx信息 EMD #######################################################
 
 # 下载并更新所需的模块
@@ -491,7 +488,7 @@ After=network.target
 [Service]
 Type=forking
 PIDFile=/run/nginx.pid
-ExecStartPre=/bin/find $NGINX_DIR/conf.d -type f -exec chmod 600 {} \;  # 设置权限为 600
+ExecStartPre=/bin/find $NGINX_DIR/conf.d -type f -exec chmod 600 {} \;
 ExecStart=/usr/local/bin/nginx -c $NGINX_DIR/conf/nginx.conf
 ExecReload=/usr/local/bin/nginx -s reload
 ExecStop=/usr/local/bin/nginx -s stop
@@ -510,6 +507,12 @@ sed -i 's|root\s*html;|root /www/wwwroot/html;|g' $NGINX_DIR/conf/nginx.conf
 
 # 创建 pid 文件
 touch /run/nginx.pid
+
+# 设置 pid 文件路径
+sudo sed -i 's/^#pid\s*logs\/nginx.pid/pid \/run\/nginx.pid/' $NGINX_DIR/conf/nginx.conf
+
+# 设置 nginx 用户
+sudo sed -i 's/^#user\s*nobody/user www-data www-data/' $NGINX_DIR/conf/nginx.conf
 
 # 重新加载 systemd 并启动 Nginx
 echo "重新加载 systemd 并启动 Nginx..."
