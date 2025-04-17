@@ -1,3 +1,4 @@
+注意：私人文件，不懂不要乱用，乱用导致的损失自己承担
 # - debian 配置脚本
    ```bash
    wget -O /tmp/system.sh https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/debian/system.sh && bash /tmp/system.sh && rm -f /tmp/system.sh
