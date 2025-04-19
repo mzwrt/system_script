@@ -8,3 +8,9 @@
    ```bash
    wget -O /tmp/nginx-install.sh https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx-install.sh && bash /tmp/nginx-install.sh && rm -f /tmp/nginx-install.sh
 ```
+
+# - xray 安装脚本
+默认安装到`/opt`目录里面
+   ```bash
+   wget -O /tmp/install-xray.sh https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/xray/install-xray.sh && bash /tmp/install-xray.sh && rm -f /tmp/install-xray.sh
+```
