@@ -5,6 +5,7 @@
 ```
 
 # - nginx 安装脚本 (注意：卸载会删除所有文件，都在/opt里面注意备份)
+默认安装到`/opt`目录里面，包括防火墙
    ```bash
    wget -O /tmp/nginx-install.sh https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx-install.sh && bash /tmp/nginx-install.sh && rm -f /tmp/nginx-install.sh
 ```
