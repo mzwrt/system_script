@@ -55,13 +55,18 @@ After=network.target
 
 [Service]
 User=$USER
-ExecStartPre=/bin/bash -c "ulimit -n 65536"  # 设置最大文件描述符数量为 65536
+# 设置最大文件描述符数量为 65536
+ExecStartPre=/bin/bash -c "ulimit -n 65536"
 ExecStart=$INSTALL_DIR/xray -config $INSTALL_DIR/config.json
 Restart=on-failure
-LimitNOFILE=65536  # 设置最大文件描述符数量为 65536
-LimitNPROC=65536    # 设置最大进程数（可选）
-LimitCORE=infinity # 设置允许的核心转储大小（可选）
-LimitSTACK=8192k   # 设置栈大小（可选）
+# 设置最大文件描述符为 65536
+LimitNOFILE=65536
+# 设置最大进程数为 2048
+LimitNPROC=2048
+# 设置允许生成完整的核心转储文件
+LimitCORE=infinity
+# 设置栈大小为 8MB
+LimitSTACK=8192k
 
 [Install]
 WantedBy=multi-user.target
