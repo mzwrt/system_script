@@ -39,6 +39,11 @@ install_xray() {
     unzip $INSTALL_DIR/Xray-linux-64.zip -d $INSTALL_DIR
     rm -f $INSTALL_DIR/Xray-linux-64.zip
 
+    # 下载配置文件
+    if [ ! -f $INSTALL_DIR/config.json ]; then
+        wget -q -O $INSTALL_DIR/config.json "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/xray/config.json"
+    fi
+
     # 设置权限
     chown -R $USER:$USER $INSTALL_DIR
 
@@ -52,7 +57,7 @@ After=network.target
 User=$USER
 ExecStart=$INSTALL_DIR/xray -config $INSTALL_DIR/config.json
 Restart=on-failure
-LimitNOFILE=4096
+LimitNOFILE=8192
 
 [Install]
 WantedBy=multi-user.target
