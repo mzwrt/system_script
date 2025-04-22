@@ -201,6 +201,31 @@ while true; do
     esac
 done
 
+# ==========================
+# 8. 是否安装 webmin
+# ==========================
+while true; do
+    read -p "是否安装 webmin ？(Y/N): " INSTALL_WEBMIN
+    case $INSTALL_WEBMIN in
+        [Yy]* )
+            echo "正在重新启动 SSH 服务..."
+            curl -o webmin-setup-repo.sh https://raw.githubusercontent.com/webmin/webmin/master/webmin-setup-repo.sh && chmod +x webmin-setup-repo.sh
+            sh webmin-setup-repo.sh
+            apt-get update
+            apt-get install webmin --install-recommends
+            echo "Webmin 已安装并且 SSH 服务已重启。"
+            break
+            ;;
+        [Nn]* )
+            echo "SSH 服务未重启，请手动重启 SSH 服务以应用更改。"
+            break
+            ;;
+        * )
+            echo "请输入 Y 或 N。"
+            ;;
+    esac
+done
+
 # 设置 vi
 wget -O /root/.vimrc https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/debian/.vimrc
 
