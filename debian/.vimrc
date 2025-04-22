@@ -12,3 +12,6 @@ set termguicolors
 
 " 使用简单的配色方案，例如 desert 或 default
 colorscheme desert
+
+" 禁用剪贴板支持
+set clipboard=
