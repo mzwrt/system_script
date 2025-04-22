@@ -210,10 +210,32 @@ while true; do
         [Yy]* )
             echo "正在安装 webmin..."
             curl -o webmin-setup-repo.sh https://raw.githubusercontent.com/webmin/webmin/master/webmin-setup-repo.sh && chmod +x webmin-setup-repo.sh
-            sh webmin-setup-repo.sh
-            apt-get update
-            apt-get install webmin --install-recommends
-            echo "Webmin 已安装webmin。"
+            sudo sh webmin-setup-repo.sh
+            sudo apt-get update
+            sudo apt-get install webmin --install-recommends
+            echo "Webmin 已安装。"
+            
+            WEBMIN_PORT=10000
+            echo "正在检测防火墙类型..."
+            
+            if command -v ufw >/dev/null 2>&1; then
+               echo "检测到 ufw 防火墙，正在为 webmin 添加允许端口 $WEBMIN_PORT..."
+               sudo ufw allow $WEBMIN_PORT/tcp
+               sudo ufw reload
+               echo "端口 $WEBMIN_PORT 已允许通过 ufw。"
+            elif command -v firewall-cmd >/dev/null 2>&1; then
+               echo "检测到 firewalld 防火墙，正在允许端口 $WEBMIN_PORT..."
+               sudo firewall-cmd --zone=public --add-port=$WEBMIN_PORT/tcp --permanent
+               sudo firewall-cmd --reload
+               echo "端口 $WEBMIN_PORT 已允许通过 firewalld。"
+            elif command -v iptables >/dev/null 2>&1; then
+               echo "检测到 iptables 防火墙，正在允许端口 $WEBMIN_PORT..."
+               sudo iptables -A INPUT -p tcp --dport $WEBMIN_PORT -j ACCEPT
+               sudo iptables-save
+               echo "端口 $WEBMIN_PORT 已允许通过 iptables。"
+            else
+               echo "未检测到已知的防火墙类型，无法自动放通端口。"
+            fi
             break
             ;;
         [Nn]* )
@@ -226,8 +248,9 @@ while true; do
     esac
 done
 
+
 # ==========================
-# 9. 是否安装 webmin
+# 9. 是否安装  webmin nginx 控制插件
 # ==========================
 while true; do
     read -p "这是 webmin nginx 控制插件，是否安装 webmin virtualmin nginx控制插件 ？(Y/N): " INSTALL_WEBMIN_NGINX
@@ -236,9 +259,36 @@ while true; do
             echo "正在安装 webmin nginx 和 webmin nginx-ssl 插件..."
             sh -c "$(curl -fsSL https://software.virtualmin.com/gpl/scripts/virtualmin-install.sh)" -- --setup
             sh webmin-setup-repo.sh
-            apt-get update
-            apt-get install webmin-virtualmin-nginx webmin-virtualmin-nginx-ssl
+            sudo apt-get update
+            sudo apt-get install webmin-virtualmin-nginx webmin-virtualmin-nginx-ssl
             echo "Webmin 已安装 webmin nginx 和 webmin nginx-ssl 插件。"
+
+            HTTP_PORT=80
+            HTTPS_PORT=443
+            echo "正在检测防火墙类型..."
+
+            # 仅放通 HTTP（80）和 HTTPS（443）端口
+            if command -v ufw >/dev/null 2>&1; then
+               echo "检测到 ufw 防火墙，正在为 HTTP 和 HTTPS 端口添加允许规则..."
+               sudo ufw allow $HTTP_PORT/tcp
+               sudo ufw allow $HTTPS_PORT/tcp
+               sudo ufw reload
+               echo "端口 $HTTP_PORT, $HTTPS_PORT 已允许通过 ufw。"
+            elif command -v firewall-cmd >/dev/null 2>&1; then
+               echo "检测到 firewalld 防火墙，正在为 HTTP 和 HTTPS 端口添加允许规则..."
+               sudo firewall-cmd --zone=public --add-port=$HTTP_PORT/tcp --permanent
+               sudo firewall-cmd --zone=public --add-port=$HTTPS_PORT/tcp --permanent
+               sudo firewall-cmd --reload
+               echo "端口 $HTTP_PORT, $HTTPS_PORT 已允许通过 firewalld。"
+            elif command -v iptables >/dev/null 2>&1; then
+               echo "检测到 iptables 防火墙，正在为 HTTP 和 HTTPS 端口添加允许规则..."
+               sudo iptables -A INPUT -p tcp --dport $HTTP_PORT -j ACCEPT
+               sudo iptables -A INPUT -p tcp --dport $HTTPS_PORT -j ACCEPT
+               sudo iptables-save
+               echo "端口 $HTTP_PORT, $HTTPS_PORT 已允许通过 iptables。"
+            else
+               echo "未检测到已知的防火墙类型，无法自动放通端口。"
+            fi
             break
             ;;
         [Nn]* )
