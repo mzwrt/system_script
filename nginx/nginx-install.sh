@@ -503,7 +503,8 @@ EOL
 sed -i "s|\${NGINX_DIR}|$NGINX_DIR|g" /etc/systemd/system/nginx.service
 
 # 创建 pid 文件
-touch /run/nginx.pid
+touch $NGINX_DIR/logs/nginx.pid
+sed -i "s|PIDFile=/run/nginx.pid|PIDFile=$NGINX_DIR/logs/nginx.pid|" /etc/systemd/system/nginx.service
 
 # 下载 proxy.conf 一个优化代理的文件
 if [ -f $NGINX_DIR/conf/proxy.conf ]; then
