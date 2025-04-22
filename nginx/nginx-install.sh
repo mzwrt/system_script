@@ -489,7 +489,7 @@ After=network.target
 [Service]
 Type=forking
 PIDFile=/run/nginx.pid
-ExecStartPre=/bin/find $NGINX_DIR/conf.d -type f -exec chmod 600 {} \;
+ExecStartPre=/bin/find $NGINX_DIR/conf.d -type f -exec chmod -R 600 {} \;
 ExecStart=/usr/local/bin/nginx -c $NGINX_DIR/conf/nginx.conf
 ExecReload=/usr/local/bin/nginx -s reload
 ExecStop=/usr/local/bin/nginx -s stop
@@ -502,18 +502,17 @@ EOL
 # 替换文件中的 $NGINX_DIR 为实际的路径
 sed -i "s|\${NGINX_DIR}|$NGINX_DIR|g" /etc/systemd/system/nginx.service
 
-
-# 修改默认网站路径为 /www/wwwroot/html
-sed -i 's|root\s*html;|root /www/wwwroot/html;|g' $NGINX_DIR/conf/nginx.conf
-
 # 创建 pid 文件
 touch /run/nginx.pid
 
-# 设置 pid 文件路径
-sudo sed -i 's/^#pid\s*logs\/nginx.pid/pid \/run\/nginx.pid/' $NGINX_DIR/conf/nginx.conf
+# 下载 proxy.conf 一个优化代理的文件
+if [ -f $NGINX_DIR/conf/proxy.conf ]; then
+  wget -q -O $NGINX_DIR/conf/proxy.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/proxy.conf"
+fi
 
 # 设置 nginx 用户
-sudo sed -i 's/^#user\s*nobody/user www-data www-data/' $NGINX_DIR/conf/nginx.conf
+mv $NGINX_DIR/conf/nginx.conf $NGINX_DIR/conf/nginx.conf.bak
+wget -q -O $NGINX_DIR/conf/nginx.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.conf"
 
 # 重新加载 systemd 并启动 Nginx
 echo "重新加载 systemd 并启动 Nginx..."
