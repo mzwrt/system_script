@@ -208,16 +208,41 @@ while true; do
     read -p "是否安装 webmin ？(Y/N): " INSTALL_WEBMIN
     case $INSTALL_WEBMIN in
         [Yy]* )
-            echo "正在重新启动 SSH 服务..."
+            echo "正在安装 webmin..."
             curl -o webmin-setup-repo.sh https://raw.githubusercontent.com/webmin/webmin/master/webmin-setup-repo.sh && chmod +x webmin-setup-repo.sh
             sh webmin-setup-repo.sh
             apt-get update
             apt-get install webmin --install-recommends
-            echo "Webmin 已安装并且 SSH 服务已重启。"
+            echo "Webmin 已安装webmin。"
             break
             ;;
         [Nn]* )
-            echo "SSH 服务未重启，请手动重启 SSH 服务以应用更改。"
+            echo "webmin 未安装。"
+            break
+            ;;
+        * )
+            echo "请输入 Y 或 N。"
+            ;;
+    esac
+done
+
+# ==========================
+# 9. 是否安装 webmin
+# ==========================
+while true; do
+    read -p "这是 webmin nginx 控制插件，是否安装 webmin virtualmin nginx控制插件 ？(Y/N): " INSTALL_WEBMIN_NGINX
+    case $INSTALL_WEBMIN_NGINX in
+        [Yy]* )
+            echo "正在安装 webmin nginx 和 webmin nginx-ssl 插件..."
+            sh -c "$(curl -fsSL https://software.virtualmin.com/gpl/scripts/virtualmin-install.sh)" -- --setup
+            sh webmin-setup-repo.sh
+            apt-get update
+            apt-get install webmin-virtualmin-nginx webmin-virtualmin-nginx-ssl
+            echo "Webmin 已安装 webmin nginx 和 webmin nginx-ssl 插件。"
+            break
+            ;;
+        [Nn]* )
+            echo "未安装 webmin nginx 和 webmin nginx-ssl 插件"
             break
             ;;
         * )
@@ -241,3 +266,4 @@ echo "已为用户 $USER 配置了 sudo 权限和 sudo 免密码登陆权限。"
 echo "防火墙已配置，端口 $SSH_PORT 已成功放通。"
 echo "如有需要，请重启 SSH 服务以确保配置生效。"
 echo "已经将vi 配置文件下载到/root/.vimrc如果不喜欢配置风格可以使用此命令删除：rm -f /root/.vimrc"
+echo "如果安装 webmin 请访问：https://你的IP:10000/"
