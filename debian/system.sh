@@ -201,6 +201,9 @@ while true; do
     esac
 done
 
+# 设置 vi
+wget -O /root/.vimrc https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/debian/.vimrc
+
 # ==========================
 # 8. 完成提示
 # ==========================
@@ -212,3 +215,4 @@ echo "已为用户 $USER 配置了 SSH 登录权限，允许登录的组为：$U
 echo "已为用户 $USER 配置了 sudo 权限和 sudo 免密码登陆权限。"
 echo "防火墙已配置，端口 $SSH_PORT 已成功放通。"
 echo "如有需要，请重启 SSH 服务以确保配置生效。"
+echo "已经将vi 配置文件下载到/root/.vimrc如果不喜欢配置风格可以使用此命令删除：rm -f /root/.vimrc"
