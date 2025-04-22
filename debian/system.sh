@@ -251,7 +251,9 @@ while true; do
     esac
 done
 
-# 设置 vi
+# ==========================
+# 10. vim 配置
+# ==========================
 wget -O /root/.vimrc https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/debian/.vimrc
 
 # ==========================
