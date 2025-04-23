@@ -498,7 +498,7 @@ After=network.target
 
 [Service]
 Type=forking
-PIDFile=/run/nginx.pid
+PIDFile=$NGINX_DIR/logs/nginx.pid
 ExecStartPre=/bin/find $NGINX_DIR/ssl $NGINX_DIR/conf.d -type f -exec chmod 600 {} \;
 ExecStart=/usr/local/bin/nginx -c $NGINX_DIR/conf/nginx.conf
 ExecReload=/usr/local/bin/nginx -s reload
@@ -514,7 +514,6 @@ sed -i "s|\${NGINX_DIR}|$NGINX_DIR|g" /etc/systemd/system/nginx.service
 
 # 创建 pid 文件
 touch $NGINX_DIR/logs/nginx.pid
-sed -i "s|PIDFile=/run/nginx.pid|PIDFile=$NGINX_DIR/logs/nginx.pid|" /etc/systemd/system/nginx.service
 
 # 下载 proxy.conf 一个优化代理的文件
 if [ -f $NGINX_DIR/conf/proxy.conf ]; then
