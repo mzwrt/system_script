@@ -461,18 +461,28 @@ cp -r $NGINX_DIR/nginx/conf $NGINX_DIR/conf
 find $NGINX_DIR/conf -type d -exec chmod 750 {} \;
 find $NGINX_DIR/conf -type f -exec chmod 640 {} \;
 
+# 创建ssl证书文件夹
+if [ ! -d "$NGINX_DIR/ssl" ]; then
+    mkdir -p "$NGINX_DIR/ssl"
+fi
+chmod 600 $NGINX_DIR/ssl
+chown root:root $NGINX_DIR/ssl
+
+# 创建网站配置文件文件夹
 if [ ! -d "$NGINX_DIR/conf.d" ]; then
     mkdir -p "$NGINX_DIR/conf.d"
 fi
 chmod 600 $NGINX_DIR/conf.d
 chown root:root $NGINX_DIR/conf.d
 
+# 创建网站根目录文件夹
 if [ ! -d "/www/wwwroot" ]; then
     mkdir -p /www/wwwroot
 fi
 chmod -R 755 /www
 chown -R root:root /www
 
+# 复制默认页文件
 if [ ! -d "/www/wwwroot/html" ]; then
     cp -r /opt/nginx/nginx/html /www/wwwroot/html
 fi
@@ -489,7 +499,7 @@ After=network.target
 [Service]
 Type=forking
 PIDFile=/run/nginx.pid
-ExecStartPre=/bin/find $NGINX_DIR/conf.d -type f -exec chmod -R 600 {} \;
+ExecStartPre=/bin/find $NGINX_DIR/ssl $NGINX_DIR/conf.d -type f -exec chmod 600 {} \;
 ExecStart=/usr/local/bin/nginx -c $NGINX_DIR/conf/nginx.conf
 ExecReload=/usr/local/bin/nginx -s reload
 ExecStop=/usr/local/bin/nginx -s stop
