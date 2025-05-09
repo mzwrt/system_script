@@ -210,14 +210,6 @@ mv openssl-${OPENSSL_VERSION} openssl
 rm -f openssl-${OPENSSL_VERSION}.tar.gz
 cd ..
 
-# 下载并解压 PCRE（必须手动下载和解压）
-echo "下载并解压 PCRE..."
-cd $NGINX_SRC_DIR
-wget https://sourceforge.net/projects/pcre/files/pcre/8.45/pcre-8.45.zip
-unzip pcre-8.45.zip
-rm -f pcre-8.45.zip
-cd ..
-
 # ModSecurity start 
 # 下载 ModSecurity 源码最新稳定版本
 mkdir -p $OPT_DIR/owasp
@@ -413,7 +405,7 @@ cd $NGINX_DIR/nginx
   --with-threads \
   --with-file-aio \
   --with-cc-opt='-O2 -fPIE -fPIC --param=ssp-buffer-size=4 -fstack-protector -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -march=native -mtune=native' \
-  --with-ld-opt='-Wl,-E -flto -march=native -Bsymbolic-functions -fPIE -fPIC -pie -Wl,-z,relro -Wl,-z,now' \
+  --with-ld-opt='-ljemalloc -Wl,-E -flto -march=native -Bsymbolic-functions -fPIE -fPIC -pie -Wl,-z,relro -Wl,-z,now' \
   --prefix=$NGINX_DIR \
   --with-http_v2_module \
   --with-http_v3_module \
@@ -431,10 +423,9 @@ cd $NGINX_DIR/nginx
   --with-http_realip_module \
   --with-http_mp4_module \
   --with-http_auth_request_module \
-  --with-ld-opt=-ljemalloc \
+  --with-pcre-jit \
   --add-module=$NGINX_SRC_DIR/ngx_cache_purge \
   --with-openssl=$NGINX_SRC_DIR/openssl \
-  --with-pcre=$NGINX_SRC_DIR/pcre-8.45 \
   --add-module=$NGINX_SRC_DIR/ngx_brotli \
   --add-dynamic-module=$NGINX_SRC_DIR/ModSecurity-nginx \
   --add-module=$NGINX_SRC_DIR/headers-more-nginx-module \
