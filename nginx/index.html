@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>默认站点 / Default Site</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #2c3e50, #3498db);
+      font-family: "Segoe UI", "Helvetica Neue", "Noto Sans CJK", "Noto Sans JP", "Noto Sans KR", sans-serif;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1em;
+    }
+
+    p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+      max-width: 90%;
+    }
+
+    .fade-in {
+      animation: fadeIn 1.2s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .footer {
+      position: absolute;
+      bottom: 10px;
+      font-size: 0.9rem;
+      opacity: 0.5;
+    }
+
+    .lang-block {
+      margin: 1rem 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="fade-in">
+    <h1>默认站点 / Default Site</h1>
+
+    <div class="lang-block"><strong>中文：</strong>您访问了一个未配置的域名。</div>
+    <div class="lang-block"><strong>English:</strong> You have reached a domain that is not configured.</div>
+    <div class="lang-block"><strong>日本語：</strong>このドメインはまだ構成されていません。</div>
+    <div class="lang-block"><strong>한국어：</strong>이 도메인은 아직 구성되지 않았습니다.</div>
+    <div class="lang-block"><strong>Русский:</strong> Этот домен ещё не настроен.</div>
+  </div>
+  <div class="footer">由 Cloudflare 提供服务 / Powered by Cloudflare</div>
+</body>
+</html>
