@@ -248,41 +248,52 @@ chown -R root:root $OPT_DIR/owasp
 cd $OPT_DIR/owasp  || exit 1
 
 # 获取最新版本号
+# 获取版本号
 owasp_VERSION=$(curl -s "https://api.github.com/repos/coreruleset/coreruleset/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")')
 if [ -z "$owasp_VERSION" ]; then
     echo "无法获取最新版本号。请检查网络连接或稍后重试。"
     exit 1
 fi
-owasp_VERSION_NO_V="${owasp_VERSION//v}"
-# 构建下载链接
-DOWNLOAD_URL="https://github.com/coreruleset/coreruleset/archive/refs/tags/$owasp_VERSION.tar.gz"
 
-# 下载最新版本的核心规则集
+owasp_VERSION_NO_V="${owasp_VERSION//v}"
+owasp_DOWNLOAD_URL="https://github.com/coreruleset/coreruleset/archive/refs/tags/$owasp_VERSION.tar.gz"
+
 echo "正在下载最新版本：$owasp_VERSION"
-if curl -L -o "coreruleset-$owasp_VERSION.tar.gz" "$DOWNLOAD_URL"; then
+if curl -L -o "coreruleset-$owasp_VERSION.tar.gz" "$owasp_DOWNLOAD_URL"; then
     echo "下载完成：coreruleset-$owasp_VERSION.tar.gz"
 
-    # 解压文件
-    tar -zxvf "coreruleset-$owasp_VERSION.tar.gz"
-
-    # 检查并重命名文件夹
-    if [ -d "coreruleset-$owasp_VERSION_NO_V" ]; then
-        mv "coreruleset-$owasp_VERSION_NO_V" "owasp-rules"
-
-        # 修改文件夹权限
-        chown -R root:root "owasp-rules"
-
-        # 复制文件（如果存在）
-        if [ -f "$OPT_DIR/owasp/owasp-rules/crs-setup.conf.example" ]; then
-            cp "$OPT_DIR/owasp/owasp-rules/crs-setup.conf.example" "$OPT_DIR/owasp/owasp-rules/crs-setup.conf"
-        fi
-
-        # 删除下载的压缩包
-        rm -f "coreruleset-$owasp_VERSION.tar.gz"
-    else
+    # 解压并检查
+    tar -zxf "coreruleset-$owasp_VERSION.tar.gz"
+    if [ ! -d "coreruleset-$owasp_VERSION_NO_V" ]; then
         echo "未能找到目录 coreruleset-$owasp_VERSION_NO_V，无法重命名。"
         exit 1
     fi
+
+    # 备份旧配置
+    if [ -f "$OPT_DIR/owasp/owasp-rules/crs-setup.conf" ]; then
+        cp -f "$OPT_DIR/owasp/owasp-rules/crs-setup.conf" "/tmp/crs-setup.conf"
+    fi
+
+    # 删除旧规则目录
+    rm -rf "$OPT_DIR/owasp/owasp-rules"
+
+    # 移动新规则
+    mv -f "coreruleset-$owasp_VERSION_NO_V" "$OPT_DIR/owasp/owasp-rules"
+
+    # 恢复配置或下载默认配置
+    if [ -f "/tmp/crs-setup.conf" ]; then
+        cp -f "/tmp/crs-setup.conf" "$OPT_DIR/owasp/owasp-rules/crs-setup.conf"
+    else
+        wget -q -O "$OPT_DIR/owasp/owasp-rules/crs-setup.conf" \
+        "https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity%20/crs-setup.conf"
+    fi
+
+    # 设置权限
+    chown -R root:root "$OPT_DIR/owasp/owasp-rules"
+    chmod 600 "$OPT_DIR/owasp/owasp-rules/crs-setup.conf"
+
+    # 删除压缩包
+    rm -f "coreruleset-$owasp_VERSION.tar.gz"
 else
     echo "下载最新版本 $owasp_VERSION 失败。"
     exit 1
@@ -312,14 +323,6 @@ if [ ! -f $OPT_DIR/owasp/owasp-rules/plugins/wordpress-rule-exclusions-config.co
   wget -q -O $OPT_DIR/owasp/owasp-rules/plugins/wordpress-rule-exclusions-config.conf \
   https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/master/plugins/wordpress-rule-exclusions-config.conf
 fi
-
-# 下载 crs-setup.conf 文件并备份旧文件（如果存在）
-echo "Downloading crs-setup.conf..."
-if [ -f $OPT_DIR/owasp/owasp-rules/crs-setup.conf ]; then
-  mv -f $OPT_DIR/owasp/owasp-rules/crs-setup.conf $OPT_DIR/owasp/owasp-rules/crs-setup.conf.bak
-fi
-wget -q -O $OPT_DIR/owasp/owasp-rules/crs-setup.conf \
-https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity%20/crs-setup.conf
 
 # 重命名排除规则样例文件
 if [ -f $OPT_DIR/owasp/owasp-rules/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf.example ]; then
@@ -358,27 +361,17 @@ https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity%20/
 
 # 规范规则文件权限
 echo " 规范文件权限"
-chown -R root:root $OPT_DIR/owasp/conf/*.conf
-chown -R root:root $OPT_DIR/owasp/owasp-rules/plugins/*.conf
-chown -R root:root $OPT_DIR/owasp/owasp-rules/crs-setup.conf
+# 所有 .conf 文件设置为 root 权限 600
+find "$OPT_DIR/owasp/conf" -type f -name "*.conf" -exec chmod 600 {} \; -exec chown root:root {} \;
+find "$OPT_DIR/owasp/conf" -type f -name "*.conf.bak" -exec chmod 600 {} \; -exec chown root:root {} \;
+# 所有文件夹设置为 700
+find "$OPT_DIR/owasp" -type d -exec chmod 700 {} \;
+chown -R root:root "$OPT_DIR/owasp"
+
 chown -R root:root $OPT_DIR/owasp/conf/hosts.allow
 chown -R root:root $OPT_DIR/owasp/conf/hosts.deny
-
-chmod 600 $OPT_DIR/owasp/conf/*.conf
-chmod 600 $OPT_DIR/owasp/owasp-rules/plugins/*.conf
-chmod 600 $OPT_DIR/owasp/owasp-rules/crs-setup.conf
-[ -f "$OPT_DIR/owasp/owasp-rules/crs-setup.conf.bak" ] && chmod 600 "$OPT_DIR/owasp/owasp-rules/crs-setup.conf.bak"
-[ -f "$OPT_DIR/owasp/conf/main.conf.bak" ] && chmod 600 "$OPT_DIR/owasp/conf/main.conf.bak"
 chmod 600 $OPT_DIR/owasp/conf/hosts.allow
 chmod 600 $OPT_DIR/owasp/conf/hosts.deny
-# 开启 owasp 文件-END
-
-# 规范文件权限
-chmod 600 $OPT_DIR/owasp/owasp-rules/crs-setup.conf
-chmod 600 $OPT_DIR/owasp/conf/main.conf
-chmod 600 $OPT_DIR/owasp/conf/nginx-wordpress.conf
-chmod 600 $OPT_DIR/owasp/owasp-rules/rules/*.conf
-find $OPT_DIR/owasp/owasp-rules/ -type f -exec chmod 600 {} \;
 }
 
 # 安装 Nginx 的函数
@@ -665,17 +658,20 @@ fi
 # 创建ssl证书文件夹
 if [ ! -d "$NGINX_DIR/ssl" ]; then
     mkdir -p "$NGINX_DIR/ssl"
-    chmod 600 $NGINX_DIR/ssl
+    chmod 700 $NGINX_DIR/ssl
     chown root:root $NGINX_DIR/ssl
 fi
 
 
 # 创建网站配置文件文件夹
-if [ ! -d "$NGINX_DIR/conf.d" ]; then
-    mkdir -p "$NGINX_DIR/conf.d"
-    chmod 600 $NGINX_DIR/conf.d
-    chown root:root $NGINX_DIR/conf.d
-fi
+for dir in conf.d conf.d/sites-available conf.d/sites-enabled; do
+    conf_d_full_path="$NGINX_DIR/$dir"
+    if [ ! -d "$conf_d_full_path" ]; then
+        mkdir -p "$conf_d_full_path"
+        chmod 700 "$conf_d_full_path"
+        chown root:root "$conf_d_full_path"
+    fi
+done
 
 # 创建网站根目录文件夹
 if [ ! -d "/www/wwwroot" ]; then
@@ -686,10 +682,13 @@ fi
 
 # 复制默认页文件
 if [ ! -d "/www/wwwroot/html" ]; then
-    cp -r $NGINX_DIR/nginx/html /www/wwwroot/html
+    cp -r "$NGINX_DIR/nginx/html" /www/wwwroot/html
 fi
+# 设置目录权限，确保 www-data 可读取
 chmod 544 /www/wwwroot/html
+# 所有文件只读
 find /www/wwwroot/html -type f -exec chmod 444 {} \;
+# 所属用户
 chown -R www-data:www-data /www/wwwroot/html
 
 # 配置系统服务
@@ -699,16 +698,21 @@ wget -q -O /etc/systemd/system/nginx.service "https://raw.githubusercontent.com/
 sed -i "s|\${NGINX_DIR}|$NGINX_DIR|g" /etc/systemd/system/nginx.service
 
 # 创建 pid 文件
-touch $NGINX_DIR/logs/nginx.pid
+touch "$NGINX_DIR/logs/nginx.pid"
 
 # 下载 proxy.conf 一个优化代理的文件
 if [ -f $NGINX_DIR/conf/proxy.conf ]; then
   wget -q -O $NGINX_DIR/conf/proxy.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/proxy.conf"
+  # 替换文件中的 $NGINX_DIR 为实际的路径
+  sed -i "s|\${NGINX_DIR}|$NGINX_DIR|g" $NGINX_DIR/conf/proxy.conf
 fi
 
 # 设置 nginx 用户
-mv $NGINX_DIR/conf/nginx.conf $NGINX_DIR/conf/nginx.conf.bak
+\mv -f "$NGINX_DIR/conf/nginx.conf" "$NGINX_DIR/conf/nginx.conf.bak"
 wget -q -O $NGINX_DIR/conf/nginx.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.conf"
+
+# 替换文件中的 $NGINX_DIR 为实际的路径
+sed -i "s|\${NGINX_DIR}|$NGINX_DIR|g" $NGINX_DIR/conf/nginx.conf
 
 # 重新加载 systemd 并启动 Nginx
 echo "重新加载 systemd 并启动 Nginx..."
@@ -717,7 +721,15 @@ systemctl enable nginx
 systemctl start nginx
 
 # 完成
-echo "Nginx 安装完成！可以通过 http://your_server_ip 访问。"
+echo "############# 安装说明 ################"
+echo "nginx 安装目录：$NGINX_DIR"
+echo "网站配置文件存放目录：$NGINX_DIR/conf.d"
+echo "网站SSL证书存放目录：$NGINX_DIR/ssl"
+echo "网站根目录：/www/wwwroot"
+echo "ModSecurity防火墙配置文件目录：$OPT_DIR/owasp/conf"
+echo "注意：未配置默认网站，不能直接访问IP"
+echo "文件 $NGINX_DIR/conf.d/sites-available 是存放网站配置原始文件的 文件 $NGINX_DIR/conf.d/sites-enabled 是启用的网站配置文件软连"
+echo "创建网站：在 sites-available 文件夹内创建网站配置文件。然后使用 ln -s 将配置文件软连接到 sites-enabled 文件夹内实现启用网站，这样便于管理和使用，如果停用网站直接删除 sites-enabled 内的软连即可"
 }
 
 
@@ -740,8 +752,9 @@ upgrade_nginx() {
   cp -a $NGINX_DIR/src/ModSecurity/modsecurity.conf /tmp/nginx-bak
 
   # 删除nginx
-  rm -rf $OPT_DIR/nginx-bak
-  mkdir -p /opt/nginx-bak
+  rm -rf "$OPT_DIR/nginx-bak"
+  mkdir -p "$OPT_DIR/nginx-bak"
+
 
 shopt -s dotglob nullglob
 for item in /opt/nginx/* /opt/nginx/.[!.]* /opt/nginx/..?*; do
@@ -752,7 +765,7 @@ for item in /opt/nginx/* /opt/nginx/.[!.]* /opt/nginx/..?*; do
 done
 shopt -u dotglob nullglob
 
-# 删除运行文件
+# 备份运行文件
 [ -f /usr/local/bin/nginx ] && cp -af /usr/local/bin/nginx /usr/local/bin/nginx.bak
 
 # 重新创建 /opt/nginx/src 目录
@@ -917,6 +930,14 @@ else
     modsecurity_nginx_CONFIG=""
 fi
 
+# owasp 模块控制
+if [ "$USE_owasp" == "true" ]; then
+    echo "正在安装 owasp..."
+    owasp_install
+else
+    echo "跳过 owasp 安装..."
+fi
+
 # 规范 nginx文件权限
 #find $NGINX_DIR/nginx/src -type d -exec chmod 750 {} \;
 #find $NGINX_DIR/nginx/src -type f -exec chmod 640 {} \;
@@ -1008,7 +1029,7 @@ systemctl restart nginx
 if systemctl is-active --quiet nginx; then
     echo "Nginx 启动成功，清理备份目录..."
     rm -rf "$OPT_DIR/nginx-bak"
-    rm -rf "/usr/local/bin/nginx /usr/local/bin/nginx.bak"
+    rm -rf "/usr/local/bin/nginx.bak"
     echo "Nginx 升级完成！"
 else
     echo "Nginx启动失败导致升级失败！请检查配置文件。原版本备份目录 $OPT_DIR/nginx-bak 以便排查问题"
@@ -1062,14 +1083,14 @@ uninstall_nginx() {
     echo "删除 Nginx 二进制文件..."
     [ -f "/usr/local/bin/nginx" ] && rm -f /usr/local/bin/nginx
 
-    echo "删除默认网页目录..."
-    [ -d "/www/wwwroot/html" ] && echo "如需删除默认网页，请执行：rm -rf /www/wwwroot/html"
+    # 删除 owasp 规则 保留 crs-setup.conf 配置文件
+    [ -d "$OPT_DIR/owasp/owasp-rules" ] && find "$OPT_DIR/owasp/owasp-rules/" ! -name 'crs-setup.conf' ! -path "$OPT_DIR/owasp/owasp-rules/" -exec rm -rf {} +
 
     echo "########### 说明 #######################"
 
-    echo "保留配置文件夹：$NGINX_DIR/conf, $NGINX_DIR/conf.d, $NGINX_DIR/ssl, $OPT_DIR/owasp, $NGINX_DIR/logs"
+    echo "卸载时保留的文件夹：$NGINX_DIR/conf, $NGINX_DIR/conf.d, $NGINX_DIR/ssl, $OPT_DIR/owasp, $NGINX_DIR/logs"
     echo "如需完全清除 Nginx，请运行：rm -rf $NGINX_DIR $OPT_DIR/owasp"
-    echo "如需清除网站数据，请运行：rm -rf /www"
+    echo "如需清除网站数据和删除网站根目录，请运行：rm -rf /www"
     echo "Nginx 卸载完成。"
     echo "######################################"
 }
@@ -1080,9 +1101,16 @@ if [[ -n "$1" ]]; then
   MODE="$1"
   case "$MODE" in
     install) install_nginx ;;
-    uninstall) uninstall_nginx ;;
     upgrade) upgrade_nginx ;;
-    *) echo "无效参数。用法: $0 [install|uninstall|upgrade]"; exit 1 ;;
+    uninstall)
+      read -rp "你确定要卸载 Nginx 吗？(Y/N): " confirm
+      if [[ "$confirm" =~ ^[Yy]$ ]]; then
+        uninstall_nginx
+      else
+        echo "已取消卸载操作。"
+      fi
+      ;;
+    *) echo "无效参数。用法: $0 [install|upgrade|uninstall]"; exit 1 ;;
   esac
   exit 0
 fi
@@ -1091,15 +1119,23 @@ fi
 while true; do
   echo "请选择操作模式："
   echo "1. 安装"
-  echo "2. 卸载"
-  echo "3. 升级"
+  echo "2. 更新"
+  echo "3. 卸载"
   echo "4. 退出"
   read -rp "输入 1、2、3 或 4 进行选择: " choice
 
-  case $choice in
+  case "$choice" in
     1) install_nginx; break ;;
-    2) uninstall_nginx; break ;;
-    3) upgrade_nginx; break ;;
+    2) upgrade_nginx; break ;;
+    3)
+      read -rp "你确定要卸载 Nginx 吗？(Y/N): " confirm
+      if [[ "$confirm" =~ ^[Yy]$ ]]; then
+        uninstall_nginx
+      else
+        echo "已取消卸载操作。"
+      fi
+      break
+      ;;
     4) echo "退出脚本。"; exit 0 ;;
     *) echo "无效的选择，请输入 1、2、3 或 4。" ;;
   esac
