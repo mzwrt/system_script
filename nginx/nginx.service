@@ -1,0 +1,42 @@
+[Unit]
+Description=The NGINX HTTP and reverse proxy server
+After=network.target
+
+[Service]
+Type=forking
+PIDFile=$NGINX_DIR/logs/nginx.pid
+
+# 启动前设置权限
+ExecStartPre=/bin/find $NGINX_DIR/ssl $NGINX_DIR/conf.d -type f -exec chmod 600 {} \;
+
+# 启动、重载、停止命令
+ExecStart=/usr/local/bin/nginx -c $NGINX_DIR/conf/nginx.conf
+ExecReload=/usr/local/bin/nginx -s reload
+ExecStop=/usr/local/bin/nginx -s stop
+
+# tmp安全隔离
+PrivateTmp=true
+
+# 打开文件数限制，适用于高并发
+LimitNOFILE=65535
+
+# 最大进程数限制
+LimitNPROC=4096
+
+# 允许核心转储（便于调试）
+LimitCORE=infinity
+
+# 限制服务进程修改系统文件
+ProtectSystem=full
+
+# 禁止访问用户home目录
+ProtectHome=true
+
+# 防止提权攻击
+NoNewPrivileges=true
+
+# 默认文件权限：750/640，防止非组成员读取
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target
