@@ -693,23 +693,7 @@ find /www/wwwroot/html -type f -exec chmod 444 {} \;
 chown -R www-data:www-data /www/wwwroot/html
 
 # 配置系统服务
-cat <<EOL > /etc/systemd/system/nginx.service
-[Unit]
-Description=The NGINX HTTP and reverse proxy server
-After=network.target
-
-[Service]
-Type=forking
-PIDFile=$NGINX_DIR/logs/nginx.pid
-ExecStartPre=/bin/find $NGINX_DIR/ssl $NGINX_DIR/conf.d -type f -exec chmod 600 {} \;
-ExecStart=/usr/local/bin/nginx -c $NGINX_DIR/conf/nginx.conf
-ExecReload=/usr/local/bin/nginx -s reload
-ExecStop=/usr/local/bin/nginx -s stop
-PrivateTmp=true
-
-[Install]
-WantedBy=multi-user.target
-EOL
+wget -q -O /etc/systemd/system/nginx.service "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.service"
 
 # 替换文件中的 $NGINX_DIR 为实际的路径
 sed -i "s|\${NGINX_DIR}|$NGINX_DIR|g" /etc/systemd/system/nginx.service
