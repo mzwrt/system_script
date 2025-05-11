@@ -1,42 +1,51 @@
 [Unit]
-Description=The NGINX HTTP and reverse proxy server
-After=network.target
+Description=NGINX Web 服务器
+After=network.target         # 等待网络启动完成后再启动 nginx
 
 [Service]
 Type=forking
 PIDFile=$NGINX_DIR/logs/nginx.pid
 
-# 启动前设置权限
+User=www-data              # 设置运行用户为 www-data
+Group=www-data             # 设置运行组为 www-data
+
+# 启动前修复 SSL 和配置权限，避免敏感文件权限异常
 ExecStartPre=/bin/find $NGINX_DIR/ssl $NGINX_DIR/conf.d -type f -exec chmod 600 {} \;
 
-# 启动、重载、停止命令
+# 启动 nginx 服务（使用指定配置文件）
 ExecStart=/usr/local/bin/nginx -c $NGINX_DIR/conf/nginx.conf
 ExecReload=/usr/local/bin/nginx -s reload
 ExecStop=/usr/local/bin/nginx -s stop
 
-# tmp安全隔离
-PrivateTmp=true
+# 限制资源，提高安全性
+LimitNOFILE=65535           # 打开文件最大数量，适合高并发
+LimitNPROC=4096             # 最大进程数
+LimitCORE=0                 # 禁止生成 core dump，防止信息泄露
+UMask=0027                  # 设置默认文件权限为 750/640（仅属组成员可读）
 
-# 打开文件数限制，适用于高并发
-LimitNOFILE=65535
+# 系统安全加固（systemd 安全隔离）
+ProtectSystem=strict        # 严格保护 /usr /boot /etc，进程只能只读访问这些目录
+ProtectHome=true            # 禁止访问 /home /root，防止访问用户目录
+PrivateTmp=true             # 为 nginx 分配独立 /tmp 目录，防止与其他服务交叉访问
+NoNewPrivileges=true        # 禁止提权操作，例如 setuid、capabilities 提权等
 
-# 最大进程数限制
-LimitNPROC=4096
+# 限制服务调用系统资源（系统调用过滤，限制攻击面）
+ProtectControlGroups=true   # 禁止访问 cgroup
+ProtectKernelModules=true   # 禁止加载内核模块
+ProtectKernelTunables=true  # 禁止修改内核参数
+RestrictRealtime=true       # 禁止使用实时调度
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX  # 限制仅使用网络协议族 IPv4/IPv6/Unix socket
+SystemCallFilter=~@debug @mount @reboot @swap @module  # 黑名单过滤不必要系统调用（禁止调试、挂载、重启等）
 
-# 禁用核心转储
-LimitCORE=0
+# 文件系统访问限制
+ReadOnlyPaths=/opt/nginx    # 只读挂载 nginx 配置路径
+ReadWritePaths=/opt/nginx/logs /run/nginx.pid  # 仅允许日志路径写入
+InaccessiblePaths=/boot /home /media /mnt /srv /bin /sbin /etc /root /var /usr  # 禁止访问这些路径
+ProtectProc=invisible       # 隐藏其他进程（需要 systemd >= 247）
 
-# 限制服务进程修改系统文件
-ProtectSystem=full
-
-# 禁止访问用户home目录
-ProtectHome=true
-
-# 防止提权攻击
-NoNewPrivileges=true
-
-# 默认文件权限：750/640，防止非组成员读取
-UMask=0027
+# 自动重启策略
+Restart=on-failure          # 出错时自动重启
+RestartSec=3                # 3 秒后重启
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=multi-user.target  # 启动级别为普通多用户模式
