@@ -24,7 +24,7 @@ LimitNOFILE=65535
 LimitNPROC=4096
 
 # 允许核心转储（便于调试）
-LimitCORE=infinity
+#LimitCORE=infinity
 
 # 限制服务进程修改系统文件
 ProtectSystem=full
