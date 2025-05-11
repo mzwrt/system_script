@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# 在脚本执行过程中遇到任何错误时立即退出
+set -e
+
 # 检查是否为 root 用户
 if [ "$(id -u)" -ne 0 ]; then
   echo "本脚本需要以 root 用户权限运行，请使用 sudo 执行。"
@@ -10,48 +13,379 @@ fi
 OPT_DIR="/opt"
 NGINX_DIR="/opt/nginx"  # 安装目录
 NGINX_SRC_DIR="/opt/nginx/src"   # 源代码和模块的存放目录
-mkdir -p $NGINX_SRC_DIR
-chmod 750 $NGINX_SRC_DIR
-chown -R root:root $NGINX_SRC_DIR
+
+# 创建 /opt/nginx/src 目录
+if [ ! -d "$NGINX_SRC_DIR" ]; then
+    mkdir -p "$NGINX_SRC_DIR"
+    chmod 750 "$NGINX_SRC_DIR"
+    chown -R root:root "$NGINX_SRC_DIR"
+fi
+
+# PCRE2 模块
+# 设置为 false 即不启用
+USE_PCRE2=true  
+
+# ngx_cache_purge 模块
+# 设置为 false 即不启用
+USE_ngx_cache_purge=true
+
+# ngx_http_headers_more_filter_module 模块
+# 设置为 false 即不启用
+USE_ngx_http_headers_more_filter_module=true
+
+# ngx_http_proxy_connect_module 模块
+# 设置为 false 即不启用
+USE_ngx_http_proxy_connect_module=true
+
+# ngx_brotli 模块
+# 设置为 false 即不启用
+USE_ngx_brotli=true
+
+# openssl 模块
+# 设置为 false 即不启用
+USE_openssl=true
+
+# modsecurity 模块
+# 设置为 false 即不启用
+USE_modsecurity=true
+
+# owasp 规则集下载和添加使用示例
+# 设置为 false 即不启用
+USE_owasp=true
+
+# modsecurity_nginx  模块
+# 设置为 false 即不启用
+USE_modsecurity_nginx=true
+
+openssl_install() {
+# 获取 OpenSSL 最新稳定版版本号
+echo "获取最新 OpenSSL 稳定版版本..."
+OPENSSL_VERSION=$(wget -qO- https://www.openssl.org/source/ | grep -oP 'openssl-\d+\.\d+\.\d+' | head -1 | sed 's/openssl-//')
+cd $NGINX_SRC_DIR || exit 1
+wget https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz
+tar -zxvf openssl-${OPENSSL_VERSION}.tar.gz
+mv openssl-${OPENSSL_VERSION} openssl
+rm -f openssl-${OPENSSL_VERSION}.tar.gz
+cd ..
+}
+
+ngx_brotli_install() {
+# ngx_brotli 模块（最新稳定版）
+cd $NGINX_SRC_DIR || exit 1
+git clone --recursive https://github.com/google/ngx_brotli.git $NGINX_SRC_DIR/ngx_brotli
+cd ngx_brotli  || exit 1
+git submodule update --init
+}
+
+ngx_http_proxy_connect_module_install() {
+# ngx_http_proxy_connect_module 模块（最新稳定版）
+# 获取最新 tag（版本号）
+cd $NGINX_SRC_DIR || exit 1
+
+ngx_http_proxy_connect_module_version=$(curl -s https://api.github.com/repos/chobits/ngx_http_proxy_connect_module/tags | grep -o '"name": "[^"]*' | head -n 1 | cut -d '"' -f 4)
+
+if [ -z "$ngx_http_proxy_connect_module_version" ]; then
+  echo "错误：未能获取 ngx_http_proxy_connect_module 的最新版本"
+  exit 1
+fi
+
+# 下载并解压模块
+wget https://github.com/chobits/ngx_http_proxy_connect_module/archive/refs/tags/$ngx_http_proxy_connect_module_version.zip
+if [ $? -ne 0 ]; then
+  echo "错误：下载 ngx_http_proxy_connect_module 失败"
+  exit 1
+fi
+
+unzip $ngx_http_proxy_connect_module_version.zip
+if [ $? -ne 0 ]; then
+  echo "错误：解压 ngx_http_proxy_connect_module 失败"
+  exit 1
+fi
+
+rm -f $ngx_http_proxy_connect_module_version.zip
+mv ngx_http_proxy_connect_module-${ngx_http_proxy_connect_module_version#v} ngx_http_proxy_connect_module
+
+# 应用补丁
+cd $NGINX_DIR || exit 1
+cp $NGINX_DIR/src/ngx_http_proxy_connect_module/patch/proxy_connect_rewrite_102101.patch $NGINX_DIR/nginx
+cd nginx || exit 1
+
+patch -p1 -f < proxy_connect_rewrite_102101.patch
+if [ $? -ne 0 ]; then
+  echo "错误：ngx_http_proxy_connect_module 模块应用补丁失败"
+  exit 1
+fi
+
+# 删除补丁文件
+if [ -f proxy_connect_rewrite_102101.patch ]; then
+  rm -rf proxy_connect_rewrite_102101.patch
+else
+  echo "补丁文件未找到，跳过删除。"
+fi
+}
+
+ngx_http_headers_more_filter_module_install() {
+  # ngx_http_headers_more_filter_module 模块（获取最新版本）
+  cd "$NGINX_SRC_DIR" || exit 1
+
+  # 获取最新 tag（版本号），例如 v0.38
+  #ngx_http_headers_more_filter_module_version="v0.38" # 制定版本使用
+  ngx_http_headers_more_filter_module_version=$(curl -s https://api.github.com/repos/openresty/headers-more-nginx-module/tags | grep -o '"name": "[^"]*' | head -n 1 | cut -d '"' -f 4) # 默认自动获取最新版
+
+  # 下载并解压 .tar.gz
+  wget "https://github.com/openresty/headers-more-nginx-module/archive/refs/tags/${ngx_http_headers_more_filter_module_version}.tar.gz"
+  tar -xzf "${ngx_http_headers_more_filter_module_version}.tar.gz"
+  mv "headers-more-nginx-module-${ngx_http_headers_more_filter_module_version#v}" headers-more-nginx-module
+  rm -f "${ngx_http_headers_more_filter_module_version}.tar.gz"
+}
 
 
-# 提示用户选择操作
-echo "请选择操作模式："
-echo "1. 安装"
-echo "2. 卸载"
-echo "3. 退出"
-read -rp "输入 1、2 或 3 进行选择: " choice
+ngx_cache_purge_install() {
+    # 获取最新版本标签
+    #ngx_cache_purge_version="2.3" # 制定版本使用
+    ngx_cache_purge_version=$(curl -s https://api.github.com/repos/FRiCKLE/ngx_cache_purge/tags | grep -o '"name": "[^"]*' | head -n 1 | cut -d '"' -f 4) # 默认自动获取最新版
 
-# 根据用户选择进行不同操作
-case $choice in
-  1)
-    MODE="install"
-    echo "选择安装模式，开始安装..."
-    # 执行安装操作
-    # 你可以把原来的安装代码放到这个部分
-    ;;
-  2)
-    MODE="uninstall"
-    echo "选择卸载模式，开始卸载..."
-    # 执行卸载操作
-    # 你可以把原来的卸载代码放到这个部分
-    ;;
-  3)
-    echo "退出脚本。"
-    exit 0
-    ;;
-  *)
-    echo "无效的选择，退出程序。"
+    cd "$NGINX_SRC_DIR" || { echo "无法切换到 ngx_cache_purge 目录 $NGINX_SRC_DIR"; exit 1; }
+
+    # 下载对应版本的 ZIP 文件
+    wget "https://github.com/FRiCKLE/ngx_cache_purge/archive/refs/tags/$ngx_cache_purge_version.zip" || { echo "下载 ngx_cache_purge 版本 $ngx_cache_purge_version 失败"; exit 1; }
+
+    # 解压下载的文件
+    unzip "$ngx_cache_purge_version.zip" || { echo "解压 ngx_cache_purge 文件失败"; exit 1; }
+
+    # 重命名文件夹
+    mv "ngx_cache_purge-$ngx_cache_purge_version" ngx_cache_purge || { echo "重命名 ngx_cache_purge 文件夹失败"; exit 1; }
+
+    # 删除 ZIP 文件
+    rm -f "$ngx_cache_purge_version.zip" || { echo "删除 ngx_cache_purge ZIP 文件失败"; exit 1; }
+}
+
+
+# PCRE2 模块下载
+pcre2_install() {
+    echo "正在获取 PCRE2 最新版本..."
+    #pcre2_version="pcre2-10.45" # 制定版本使用
+    pcre2_version=$(curl -sSL https://api.github.com/repos/PhilipHazel/pcre2/releases/latest | grep -oP '"tag_name":\s*"\K[^"]+') # 默认自动获取最新版
+
+    if [ -z "$pcre2_version" ]; then
+        echo "获取 PCRE2 版本失败，请检查网络连接或 GitHub API。"
+        exit 1
+    fi
+
+    cd "$NGINX_SRC_DIR" || exit 1
+
+    if [ -d "pcre2" ]; then
+        echo "pcre2 目录已存在，跳过安装。"
+        return
+    fi
+
+    echo "正在下载并安装 PCRE2：$pcre2_version"
+    curl -LO "https://github.com/PhilipHazel/pcre2/releases/download/$pcre2_version/$pcre2_version.tar.gz"
+
+    if [ ! -f "$pcre2_version.tar.gz" ]; then
+        echo "下载 pcre2 失败，请检查链接或网络。"
+        exit 1
+    fi
+
+    tar -zxf "$pcre2_version.tar.gz" || { echo "解压 pcre2 文件失败"; exit 1; }
+    mv "$pcre2_version" pcre2 || { echo "重命名 pcre2 文件夹失败"; exit 1; }
+    rm -f "$pcre2_version.tar.gz" || { echo "删除 pcre2 tar.gz 文件失败"; exit 1; }
+}
+
+modsecurity_install() {
+modsecurity_dir_install="/usr/local/modsecurity"
+# 如果存在，删除/usr/local/modsecurity目录重新安装
+if [ -d "$modsecurity_dir_install" ]; then
+    echo "目录 $modsecurity_dir_install 已存在，正在删除..."
+    rm -rf $modsecurity_dir_install
+fi
+
+cd $NGINX_SRC_DIR || exit 1
+
+git clone --depth 1 -b v3/master --single-branch https://github.com/SpiderLabs/ModSecurity ModSecurity
+cd ModSecurity || exit 1
+git submodule update --recursive
+git submodule init
+git submodule update
+# 配置 ModSecurity（禁用 jemalloc）
+# jemalloc 与 ModSecurity 不兼容
+# 所以添加 JEMALLOC_CFLAGS="" JEMALLOC_LIBS="" 和 --disable-shared 
+# 让 ModSecurity 变为静态模块
+./build.sh
+./configure
+make
+make install
+# 下载 modsecurity.conf 文件并备份旧文件（如果存在）
+echo "Downloading modsecurity.conf..."
+if [ -f $NGINX_SRC_DIR/ModSecurity/modsecurity.conf ]; then
+  mv -f $NGINX_SRC_DIR/ModSecurity/modsecurity.conf $NGINX_SRC_DIR/ModSecurity/modsecurity.conf.bak  # 备份旧文件
+fi
+wget -q -O $NGINX_SRC_DIR/ModSecurity/modsecurity.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/ModSecurity%20/modsecurity.conf"
+
+# 规范文件权限
+chown -R root:root $NGINX_SRC_DIR/ModSecurity/modsecurity.conf
+chmod 600 $NGINX_SRC_DIR/ModSecurity/modsecurity.conf
+if [ -f $NGINX_SRC_DIR/ModSecurity/modsecurity.conf.bak ]; then
+  chmod 600 $NGINX_SRC_DIR/ModSecurity/modsecurity.conf.bak
+fi
+}
+
+modsecurity_nginx_install() {
+# 进入 ModSecurity 源码目录
+cd $NGINX_SRC_DIR || exit 1
+
+# 下载 ModSecurity-nginx 模块
+git clone --depth 1 https://github.com/SpiderLabs/ModSecurity-nginx.git
+chown -R root:root $NGINX_SRC_DIR/ModSecurity-nginx
+}
+
+owasp_install() {
+# OWASP核心规则集下载-start 
+# 下载 owasp 源码最新稳定版本
+mkdir -p $OPT_DIR/owasp
+chown -R root:root $OPT_DIR/owasp
+# OWASP核心规则集下载 
+cd $OPT_DIR/owasp  || exit 1
+
+# 获取最新版本号
+owasp_VERSION=$(curl -s "https://api.github.com/repos/coreruleset/coreruleset/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")')
+if [ -z "$owasp_VERSION" ]; then
+    echo "无法获取最新版本号。请检查网络连接或稍后重试。"
     exit 1
-    ;;
-esac
+fi
+owasp_VERSION_NO_V="${owasp_VERSION//v}"
+# 构建下载链接
+DOWNLOAD_URL="https://github.com/coreruleset/coreruleset/archive/refs/tags/$owasp_VERSION.tar.gz"
+
+# 下载最新版本的核心规则集
+echo "正在下载最新版本：$owasp_VERSION"
+if curl -L -o "coreruleset-$owasp_VERSION.tar.gz" "$DOWNLOAD_URL"; then
+    echo "下载完成：coreruleset-$owasp_VERSION.tar.gz"
+
+    # 解压文件
+    tar -zxvf "coreruleset-$owasp_VERSION.tar.gz"
+
+    # 检查并重命名文件夹
+    if [ -d "coreruleset-$owasp_VERSION_NO_V" ]; then
+        mv "coreruleset-$owasp_VERSION_NO_V" "owasp-rules"
+
+        # 修改文件夹权限
+        chown -R root:root "owasp-rules"
+
+        # 复制文件（如果存在）
+        if [ -f "$OPT_DIR/owasp/owasp-rules/crs-setup.conf.example" ]; then
+            cp "$OPT_DIR/owasp/owasp-rules/crs-setup.conf.example" "$OPT_DIR/owasp/owasp-rules/crs-setup.conf"
+        fi
+
+        # 删除下载的压缩包
+        rm -f "coreruleset-$owasp_VERSION.tar.gz"
+    else
+        echo "未能找到目录 coreruleset-$owasp_VERSION_NO_V，无法重命名。"
+        exit 1
+    fi
+else
+    echo "下载最新版本 $owasp_VERSION 失败。"
+    exit 1
+fi
+# OWASP核心规则集下载-END
+
+# 开启 owasp 文件-start
+# 创建引入文件
+# 修改配置文件名
+mkdir -p $OPT_DIR/owasp/conf
+mkdir -p "$OPT_DIR/owasp/owasp-rules/plugins"
+
+# 添加 WordPress 常用的 Nginx 拒绝规则配置文件
+if [ ! -f $OPT_DIR/owasp/conf/nginx-wordpress.conf ]; then
+   wget -c -T 20 -O $OPT_DIR/owasp/conf/nginx-wordpress.conf \
+   https://gist.githubusercontent.com/nfsarmento/57db5abba08b315b67f174cd178bea88/raw/b0768871c3349fdaf549a24268cb01b2be145a6a/nginx-wordpress.conf
+fi
+
+echo "Downloading WordPress 规则排除插件"
+# 下载 wordpress-rule-exclusions-before.conf 和 wordpress-rule-exclusions-config.conf 文件
+if [ ! -f $OPT_DIR/owasp/owasp-rules/plugins/wordpress-rule-exclusions-before.conf ]; then
+  wget -q -O $OPT_DIR/owasp/owasp-rules/plugins/wordpress-rule-exclusions-before.conf \
+  https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/master/plugins/wordpress-rule-exclusions-before.conf
+fi
+
+if [ ! -f $OPT_DIR/owasp/owasp-rules/plugins/wordpress-rule-exclusions-config.conf ]; then
+  wget -q -O $OPT_DIR/owasp/owasp-rules/plugins/wordpress-rule-exclusions-config.conf \
+  https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/master/plugins/wordpress-rule-exclusions-config.conf
+fi
+
+# 下载 crs-setup.conf 文件并备份旧文件（如果存在）
+echo "Downloading crs-setup.conf..."
+if [ -f $OPT_DIR/owasp/owasp-rules/crs-setup.conf ]; then
+  mv -f $OPT_DIR/owasp/owasp-rules/crs-setup.conf $OPT_DIR/owasp/owasp-rules/crs-setup.conf.bak
+fi
+wget -q -O $OPT_DIR/owasp/owasp-rules/crs-setup.conf \
+https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity%20/crs-setup.conf
+
+# 重命名排除规则样例文件
+if [ -f $OPT_DIR/owasp/owasp-rules/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf.example ]; then
+  mv $OPT_DIR/owasp/owasp-rules/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf.example \
+     $OPT_DIR/owasp/owasp-rules/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf
+fi
+if [ -f $OPT_DIR/owasp/owasp-rules/rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf.example ]; then
+  mv -f $OPT_DIR/owasp/owasp-rules/rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf.example \
+        $OPT_DIR/owasp/owasp-rules/rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf
+fi
+
+# 下载 hosts.deny 文件并备份旧文件（如果存在）
+echo "Downloading hosts.deny..."
+if [ -f $OPT_DIR/owasp/conf/hosts.deny ]; then
+  mv -f $OPT_DIR/owasp/conf/hosts.deny $OPT_DIR/owasp/conf/hosts.deny.bak
+fi
+wget -q -O $OPT_DIR/owasp/conf/hosts.deny \
+https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity%20/hosts.deny
+
+# 下载 hosts.allow 文件并备份旧文件（如果存在）
+echo "Downloading hosts.allow..."
+if [ -f $OPT_DIR/owasp/conf/hosts.allow ]; then
+  mv -f $OPT_DIR/owasp/conf/hosts.allow $OPT_DIR/owasp/conf/hosts.allow.bak
+fi
+wget -q -O $OPT_DIR/owasp/conf/hosts.allow \
+https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity%20/hosts.allow
+
+# 下载 main.conf 文件并备份旧文件（如果存在）
+echo "Downloading main.conf..."
+if [ -f $OPT_DIR/owasp/conf/main.conf ]; then
+  mv -f $OPT_DIR/owasp/conf/main.conf $OPT_DIR/owasp/conf/main.conf.bak
+fi
+wget -q -O $OPT_DIR/owasp/conf/main.conf \
+https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity%20/main.conf
+
+
+# 规范规则文件权限
+echo " 规范文件权限"
+chown -R root:root $OPT_DIR/owasp/conf/*.conf
+chown -R root:root $OPT_DIR/owasp/owasp-rules/plugins/*.conf
+chown -R root:root $OPT_DIR/owasp/owasp-rules/crs-setup.conf
+chown -R root:root $OPT_DIR/owasp/conf/hosts.allow
+chown -R root:root $OPT_DIR/owasp/conf/hosts.deny
+
+chmod 600 $OPT_DIR/owasp/conf/*.conf
+chmod 600 $OPT_DIR/owasp/owasp-rules/plugins/*.conf
+chmod 600 $OPT_DIR/owasp/owasp-rules/crs-setup.conf
+[ -f "$OPT_DIR/owasp/owasp-rules/crs-setup.conf.bak" ] && chmod 600 "$OPT_DIR/owasp/owasp-rules/crs-setup.conf.bak"
+[ -f "$OPT_DIR/owasp/conf/main.conf.bak" ] && chmod 600 "$OPT_DIR/owasp/conf/main.conf.bak"
+chmod 600 $OPT_DIR/owasp/conf/hosts.allow
+chmod 600 $OPT_DIR/owasp/conf/hosts.deny
+# 开启 owasp 文件-END
+
+# 规范文件权限
+chmod 600 $OPT_DIR/owasp/owasp-rules/crs-setup.conf
+chmod 600 $OPT_DIR/owasp/conf/main.conf
+chmod 600 $OPT_DIR/owasp/conf/nginx-wordpress.conf
+chmod 600 $OPT_DIR/owasp/owasp-rules/rules/*.conf
+find $OPT_DIR/owasp/owasp-rules/ -type f -exec chmod 600 {} \;
+}
 
 # 安装 Nginx 的函数
 install_nginx() {
 
 read -p "您喜欢将nginx伪装成一个什么名字 禁止使用任何特殊符号仅限英文大小写和空格（例如：OWASP WAF） 留空将不修改使用默认值 默认值是ngixn： " nginx_fake_name
 read -p "请输入自定义的nginx版本号（例如：5.1.24）留空将不修改使用默认版本号： " nginx_version_number
-
 
 # 安装编译 Nginx 所需的依赖
 echo "安装编译 Nginx 所需的依赖..."
@@ -84,16 +418,12 @@ apt-get install -y \
     libmaxminddb0 \
     libmaxminddb-dev \
     liblmdb-dev \
-    libyaml-dev \
-    libssl-dev \
     libtool \
     liblzma-dev \
-    libgeoip-dev \
-    libjemalloc-dev \
     autoconf \
     automake \
-    libtool \
-    pkg-config \
+    gawk \
+    libyajl-dev \
     libxml2-dev || { echo "依赖安装失败，开始卸载..."; uninstall_nginx; exit 1; }
 
 # 获取最新的稳定版 Nginx 版本
@@ -102,22 +432,29 @@ echo "获取最新的稳定版 Nginx 版本..."
 # 这个是获取最新稳定版
 #NGINX_VERSION=$(wget -qO- https://nginx.org/en/download.html | grep -oP 'Stable version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | grep -oP '\d+\.\d+\.\d+')
 
-# 这个是获取主线版本
+# 获取 Nginx 主线版本
 NGINX_VERSION=$(curl -s https://nginx.org/en/download.html | grep -oP 'Mainline version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | sed -E 's/.*nginx-([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
-
+if [ -z "$NGINX_VERSION" ]; then
+    echo "未能获取 Nginx 主线版本，请检查下载页面结构"
+    exit 1
+fi
 
 # 下载 Nginx 源码包
 echo "下载 Nginx 源代码..."
-cd $NGINX_DIR
-wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz
+cd $NGINX_DIR || exit 1
+wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz || { echo "下载失败"; exit 1; }
 
 # 解压源码
 tar -zxvf nginx-${NGINX_VERSION}.tar.gz
+if [ -d "$NGINX_DIR/nginx" ]; then
+    rm -rf $NGINX_DIR/nginx
+fi
 mv nginx-${NGINX_VERSION} nginx
 chown -R root:root $NGINX_DIR/nginx
 rm -f nginx-${NGINX_VERSION}.tar.gz
 
-########################### 替换 Nginx 版本信息和错误页标签 #######################################
+
+# 替换 Nginx 版本信息和错误页标签
 if [ -n "$nginx_fake_name" ] || [ -n "$nginx_version_number" ]; then
     # 处理特殊字符，但不替换空格
     nginx_fake_name=$(echo "$nginx_fake_name" | sed 's/[&/\]/\\&/g')
@@ -158,232 +495,99 @@ if [ -n "$nginx_fake_name" ] || [ -n "$nginx_version_number" ]; then
 else
     echo "未输入任何修改信息，文件未做任何更改。"
 fi
-################################### 替换nginx信息 EMD #######################################################
+# 替换nginx信息 EMD
 
 
 # 下载并更新所需的模块
 echo "下载和更新所需的模块..."
 
-# ngx_cache_purge 模块（最新稳定版）
-cd $NGINX_SRC_DIR
-wget https://github.com/FRiCKLE/ngx_cache_purge/archive/refs/tags/2.3.zip
-unzip 2.3.zip
-mv ngx_cache_purge-2.3 ngx_cache_purge
-rm -f 2.3.zip
-
-# ngx_http_headers_more_filter_module 模块（最新稳定版）
-cd $NGINX_SRC_DIR
-wget https://github.com/openresty/headers-more-nginx-module/archive/refs/tags/v0.38.zip
-unzip v0.38.zip
-mv headers-more-nginx-module-0.38 headers-more-nginx-module
-rm -f v0.38.zip
-
-
-# ngx_http_proxy_connect_module 模块（最新稳定版）
-cd $NGINX_SRC_DIR
-wget https://github.com/chobits/ngx_http_proxy_connect_module/archive/refs/tags/v0.0.7.zip
-unzip v0.0.7.zip
-rm -f v0.0.7.zip
-mv ngx_http_proxy_connect_module-0.0.7 ngx_http_proxy_connect_module
-# 应用补丁
-cd $NGINX_DIR
-cp $NGINX_DIR/src/ngx_http_proxy_connect_module/patch/proxy_connect_rewrite_102101.patch $NGINX_DIR/nginx
-cd nginx
-patch -p1 < proxy_connect_rewrite_102101.patch
-rm -rf proxy_connect_rewrite_102101.patch
-
-
-# ngx_brotli 模块（最新稳定版）
-cd $NGINX_SRC_DIR
-git clone --recursive https://github.com/google/ngx_brotli.git $NGINX_SRC_DIR/ngx_brotli
-cd ngx_brotli
-git submodule update --init
-cd ..
-
-# 获取 OpenSSL 最新稳定版版本号
-echo "获取最新 OpenSSL 稳定版版本..."
-OPENSSL_VERSION=$(wget -qO- https://www.openssl.org/source/ | grep -oP 'openssl-\d+\.\d+\.\d+' | head -1 | sed 's/openssl-//')
-cd $NGINX_SRC_DIR
-wget https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz
-tar -zxvf openssl-${OPENSSL_VERSION}.tar.gz
-mv openssl-${OPENSSL_VERSION} openssl
-rm -f openssl-${OPENSSL_VERSION}.tar.gz
-cd ..
-
-# ModSecurity start 
-# 下载 ModSecurity 源码最新稳定版本
-mkdir -p $OPT_DIR/owasp
-chown -R root:root $OPT_DIR/owasp
-
-modsecurity_dir="/usr/local/modsecurity"
-
-# 如果存在，删除/usr/local/modsecurity目录重新安装
-if [ -d "$modsecurity_dir" ]; then
-    echo "目录 $modsecurity_dir 已存在，正在删除..."
-    rm -rf $modsecurity_dir
-fi
-
-cd $NGINX_SRC_DIR
-
-git clone --depth 1 -b v3/master --single-branch https://github.com/SpiderLabs/ModSecurity ModSecurity
-cd ModSecurity
-git submodule init
-git submodule update
-# 配置 ModSecurity
-./build.sh
-./configure
-make
-make install
-# 配置文件改名
-if [ -f "$NGINX_SRC_DIR/ModSecurity/modsecurity.conf-recommended" ]; then
-        cp "$NGINX_SRC_DIR/ModSecurity/modsecurity.conf-recommended" "$NGINX_SRC_DIR/ModSecurity/modsecurity.conf"
-fi
-
-# 进入 ModSecurity 源码目录
-cd $NGINX_SRC_DIR
-
-# 下载 ModSecurity-nginx 模块
-git clone --depth 1 https://github.com/SpiderLabs/ModSecurity-nginx.git
-
-# 设置目录和文件的所有者为 root:root
-chown -R root:root $NGINX_SRC_DIR/ModSecurity-nginx
-
-echo "ModSecurity 和 ModSecurity-nginx 安装及配置完成。"
-
-
-# OWASP核心规则集下载 
-cd $OPT_DIR/owasp
-
-# 获取最新版本号
-LATEST_VERSION=$(curl -s "https://api.github.com/repos/coreruleset/coreruleset/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")')
-if [ -z "$LATEST_VERSION" ]; then
-    echo "无法获取最新版本号。请检查网络连接或稍后重试。"
-    exit 1
-fi
-LATEST_VERSION_NO_V="${LATEST_VERSION//v}"
-# 构建下载链接
-DOWNLOAD_URL="https://github.com/coreruleset/coreruleset/archive/refs/tags/$LATEST_VERSION.tar.gz"
-
-# 下载最新版本的核心规则集
-echo "正在下载最新版本：$LATEST_VERSION"
-if curl -L -o "coreruleset-$LATEST_VERSION.tar.gz" "$DOWNLOAD_URL"; then
-    echo "下载完成：coreruleset-$LATEST_VERSION.tar.gz"
-
-    # 解压文件
-    tar -zxvf "coreruleset-$LATEST_VERSION.tar.gz"
-
-    # 检查并重命名文件夹
-    if [ -d "coreruleset-$LATEST_VERSION_NO_V" ]; then
-        mv "coreruleset-$LATEST_VERSION_NO_V" "owasp-rules"
-
-        # 修改文件夹权限
-        chown -R root:root "owasp-rules"
-
-        # 复制文件（如果存在）
-        if [ -f "$OPT_DIR/owasp/owasp-rules/crs-setup.conf.example" ]; then
-            cp "$OPT_DIR/owasp/owasp-rules/crs-setup.conf.example" "$OPT_DIR/owasp/owasp-rules/crs-setup.conf"
-        fi
-
-        # 删除下载的压缩包
-        rm -f "coreruleset-$LATEST_VERSION.tar.gz"
-    else
-        echo "未能找到目录 coreruleset-$LATEST_VERSION_NO_V，无法重命名。"
-        exit 1
-    fi
+# ngx_cache_purge 模块控制
+if [ "$USE_ngx_cache_purge" == "true" ]; then
+    echo "正在安装 ngx_cache_purge..."
+    ngx_cache_purge_install
+    ngx_cache_purge_CONFIG="--add-module=$NGINX_SRC_DIR/ngx_cache_purge"
 else
-    echo "下载最新版本 $LATEST_VERSION 失败。"
-    exit 1
-fi
-# OWASP核心规则集下载-END
-
-# 开启ModSecurity文件-start
-# 创建引入文件
-# 修改配置文件名
-mkdir -p $OPT_DIR/owasp/conf
-
-# 添加wordpress常用的nginx拒绝规则配置文件
-wget -c -O $OPT_DIR/owasp/conf/nginx-wordpress.conf https://gist.githubusercontent.com/nfsarmento/57db5abba08b315b67f174cd178bea88/raw/b0768871c3349fdaf549a24268cb01b2be145a6a/nginx-wordpress.conf -T 20
-
-
-echo "Downloading WordPress 规则排除插件"
-# 下载 wordpress-rule-exclusions-before.conf 和 wordpress-rule-exclusions-config.conf 文件
-wget -q -O $OPT_DIR/owasp/owasp-rules/plugins/wordpress-rule-exclusions-before.conf "https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/refs/heads/master/plugins/wordpress-rule-exclusions-before.conf"
-wget -q -O $OPT_DIR/owasp/owasp-rules/plugins/wordpress-rule-exclusions-config.conf "https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/refs/heads/master/plugins/wordpress-rule-exclusions-config.conf"
-
-# 下载 crs-setup.conf 文件并备份旧文件（如果存在）
-echo "Downloading crs-setup.conf..."
-if [ -f $OPT_DIR/owasp/owasp-rules/crs-setup.conf ]; then
-  mv $OPT_DIR/owasp/owasp-rules/crs-setup.conf $OPT_DIR/owasp/owasp-rules/crs-setup.conf.bak  # 备份旧文件
-fi
-wget -q -O $OPT_DIR/owasp/owasp-rules/crs-setup.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/ModSecurity%20/crs-setup.conf"
-
-#
-if [ -f $OPT_DIR/owasp/owasp-rules/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf.example ]; then
-mv $OPT_DIR/owasp/owasp-rules/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf.example $OPT_DIR/owasp/owasp-rules/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf
-fi
-if [ -f $OPT_DIR/owasp/owasp-rules/rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf.example ]; then
-mv $OPT_DIR/owasp/owasp-rules/rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf.example $OPT_DIR/owasp/owasp-rules/rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf
+    echo "跳过 ngx_cache_purge 安装..."
+    ngx_cache_purge_CONFIG=""
 fi
 
-# 下载 modsecurity.conf 文件并备份旧文件（如果存在）
-echo "Downloading modsecurity.conf..."
-if [ -f $NGINX_SRC_DIR/ModSecurity/modsecurity.conf ]; then
-  mv $NGINX_SRC_DIR/ModSecurity/modsecurity.conf $NGINX_SRC_DIR/ModSecurity/modsecurity.conf.bak  # 备份旧文件
+# ngx_http_headers_more_filter_module 模块控制
+if [ "$USE_ngx_http_headers_more_filter_module" == "true" ]; then
+    echo "正在安装 ngx_http_headers_more_filter_module..."
+    ngx_http_headers_more_filter_module_install
+    ngx_http_headers_more_filter_module_CONFIG="--add-module=$NGINX_SRC_DIR/headers-more-nginx-module"
+else
+    echo "跳过 ngx_cache_purge 安装..."
+    ngx_http_headers_more_filter_module_CONFIG=""
 fi
-wget -q -O $NGINX_SRC_DIR/ModSecurity/modsecurity.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/ModSecurity%20/modsecurity.conf"
 
-# 下载 hosts.deny 文件并备份旧文件（如果存在）
-echo "Downloading modsecurity.conf..."
-if [ -f $OPT_DIR/owasp/conf/hosts.deny ]; then
-  mv $OPT_DIR/owasp/conf/hosts.deny $OPT_DIR/owasp/conf/hosts.deny.bak  # 备份旧文件
+# ngx_http_proxy_connect_module 模块控制
+if [ "$USE_ngx_http_proxy_connect_module" == "true" ]; then
+    echo "正在安装 ngx_http_proxy_connect_module..."
+    ngx_http_proxy_connect_module_install
+    ngx_http_proxy_connect_module_CONFIG="--add-module=$NGINX_SRC_DIR/ngx_http_proxy_connect_module"
+else
+    echo "跳过 ngx_http_proxy_connect_module 安装..."
+    ngx_http_proxy_connect_module_CONFIG=""
 fi
-wget -q -O $OPT_DIR/owasp/conf/hosts.deny "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/ModSecurity%20/hosts.deny"
 
-# 下载 hosts.deny 文件并备份旧文件（如果存在）
-echo "Downloading hosts.allow..."
-if [ -f $OPT_DIR/owasp/conf/hosts.allow ]; then
-  mv $OPT_DIR/owasp/conf/hosts.allow $OPT_DIR/owasp/conf/hosts.allow.bak  # 备份旧文件
+# PCRE2 模块控制
+if [ "$USE_PCRE2" == "true" ]; then
+    echo "正在安装 PCRE2..."
+    pcre2_install
+    PCRE2_CONFIG="--with-pcre=$NGINX_SRC_DIR/pcre2"
+else
+    echo "跳过 PCRE2 安装..."
+    PCRE2_CONFIG=""
 fi
-wget -q -O $OPT_DIR/owasp/conf/hosts.allow "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/ModSecurity%20/hosts.allow"
 
-# 下载 hosts.deny 文件并备份旧文件（如果存在）
-echo "Downloading main.conf..."
-if [ -f $OPT_DIR/owasp/conf/main.conf ]; then
-  mv $OPT_DIR/owasp/conf/main.conf $OPT_DIR/owasp/conf/main.conf.bak  # 备份旧文件
+# ngx_brotli 模块控制
+if [ "$USE_ngx_brotli" == "true" ]; then
+    echo "正在安装 ngx_brotli..."
+    ngx_brotli_install
+    ngx_brotli_CONFIG="--add-module=$NGINX_SRC_DIR/ngx_brotli"
+else
+    echo "跳过 ngx_brotli 安装..."
+    ngx_brotli_CONFIG=""
 fi
-wget -q -O $OPT_DIR/owasp/conf/main.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/ModSecurity%20/main.conf"
 
-# 规范规则文件权限
-echo " 规范文件权限"
-chown -R root:root $OPT_DIR/owasp/conf/*.conf
-chown -R root:root $OPT_DIR/owasp/owasp-rules/plugins/*.conf
-chown -R root:root $OPT_DIR/owasp/owasp-rules/crs-setup.conf
-chown -R root:root $NGINX_SRC_DIR/ModSecurity/modsecurity.conf
-chown -R root:root $OPT_DIR/owasp/conf/hosts.allow
-chown -R root:root $OPT_DIR/owasp/conf/hosts.deny
+# openssl 模块控制
+if [ "$USE_openssl" == "true" ]; then
+    echo "正在安装 openssl..."
+    openssl_install
+    openssl_CONFIG="--with-openssl=$NGINX_SRC_DIR/openssl"
+else
+    echo "跳过 openssl 安装..."
+    openssl_CONFIG=""
+fi
 
-chmod 600 $OPT_DIR/owasp/conf/*.conf
-chmod 600 $OPT_DIR/owasp/owasp-rules/plugins/*.conf
-chmod 600 $OPT_DIR/owasp/owasp-rules/crs-setup.conf
-chmod 600 $NGINX_SRC_DIR/ModSecurity/modsecurity.conf
-chmod 600 $OPT_DIR/owasp/owasp-rules/crs-setup.conf.bak
-chmod 600 $NGINX_SRC_DIR/ModSecurity/modsecurity.conf.bak
-chmod 600 $OPT_DIR/owasp/conf/main.conf.bak
-chmod 600 $OPT_DIR/owasp/conf/hosts.allow
-chmod 600 $OPT_DIR/owasp/conf/hosts.deny
-# 开启ModSecurity文件-END
+# modsecurity 模块控制
+if [ "$USE_modsecurity" == "true" ]; then
+    echo "正在安装 modsecurity..."
+    modsecurity_install
+else
+    echo "跳过 modsecurity 安装..."
+fi
 
-# 规范文件权限
-#chmod 750 $NGINX_DIR/modules
-#chmod 640 $NGINX_DIR/modules/ngx_http_modsecurity_module.so
-chmod 600 $NGINX_SRC_DIR/ModSecurity/modsecurity.conf
-chmod 600 $OPT_DIR/owasp/owasp-rules/crs-setup.conf
-chmod 600 $OPT_DIR/owasp/conf/main.conf
-chmod 600 $OPT_DIR/owasp/conf/nginx-wordpress.conf
-chmod 600 $OPT_DIR/owasp/owasp-rules/rules/*.conf
-find $OPT_DIR/owasp/owasp-rules/ -type f -exec chmod 600 {} \;
+# modsecurity_nginx 模块控制
+if [ "$USE_modsecurity_nginx" == "true" ]; then
+    echo "正在安装 modsecurity_nginx..."
+    modsecurity_nginx_install
+    # 因为与jemalloc不兼容，所以改为静态模块
+    #modsecurity_nginx_CONFIG="--add-dynamic-module=$NGINX_SRC_DIR/ModSecurity-nginx"
+    modsecurity_nginx_CONFIG="--add-module=$NGINX_SRC_DIR/ModSecurity-nginx"
+else
+    echo "跳过 modsecurity_nginx 安装..."
+    modsecurity_nginx_CONFIG=""
+fi
 
-# ModSecurity END 
+# owasp 模块控制
+if [ "$USE_owasp" == "true" ]; then
+    echo "正在安装 owasp..."
+    owasp_install
+else
+    echo "跳过 owasp 安装..."
+fi
 
 # 规范 nginx文件权限
 #find $NGINX_DIR/nginx/src -type d -exec chmod 750 {} \;
@@ -398,38 +602,40 @@ chown -R root:root $NGINX_DIR
 
 # 配置编译选项
 echo "配置 Nginx 编译选项..."
-cd $NGINX_DIR/nginx
+cd $NGINX_DIR/nginx || exit 1
 ./configure \
+  --prefix=$NGINX_DIR \
   --user=www-data \
   --group=www-data \
   --with-threads \
   --with-file-aio \
-  --with-cc-opt='-O2 -fPIE -fPIC --param=ssp-buffer-size=4 -fstack-protector -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -march=native -mtune=native' \
-  --with-ld-opt='-ljemalloc -Wl,-E -flto -march=native -Bsymbolic-functions -fPIE -fPIC -pie -Wl,-z,relro -Wl,-z,now' \
-  --prefix=$NGINX_DIR \
+  --with-pcre-jit \
+  --with-http_ssl_module \
   --with-http_v2_module \
   --with-http_v3_module \
+  --with-http_gzip_static_module \
+  --with-http_stub_status_module \
+  --with-http_realip_module \
+  --with-http_auth_request_module \
+  --with-http_sub_module \
+  --with-http_flv_module \
+  --with-http_mp4_module \
+  --with-http_addition_module \
+  --with-http_image_filter_module \
+  --with-http_gunzip_module \
   --with-stream \
   --with-stream_ssl_module \
   --with-stream_ssl_preread_module \
-  --with-http_stub_status_module \
-  --with-http_ssl_module \
-  --with-http_image_filter_module \
-  --with-http_gzip_static_module \
-  --with-http_gunzip_module \
-  --with-http_sub_module \
-  --with-http_flv_module \
-  --with-http_addition_module \
-  --with-http_realip_module \
-  --with-http_mp4_module \
-  --with-http_auth_request_module \
-  --with-pcre-jit \
-  --add-module=$NGINX_SRC_DIR/ngx_cache_purge \
-  --with-openssl=$NGINX_SRC_DIR/openssl \
-  --add-module=$NGINX_SRC_DIR/ngx_brotli \
-  --add-dynamic-module=$NGINX_SRC_DIR/ModSecurity-nginx \
-  --add-module=$NGINX_SRC_DIR/headers-more-nginx-module \
-  --add-module=$NGINX_SRC_DIR/ngx_http_proxy_connect_module
+  --with-compat \
+  --with-cc-opt='-O3 -fPIE -fPIC -march=native -mtune=native -flto -fstack-protector-strong -Wformat -Werror=format-security -D_FORTIFY_SOURCE=2' \
+  --with-ld-opt='-ljemalloc -flto -fPIE -fPIC -pie -Wl,-E -Wl,-z,relro,-z,now -Wl,-O1' \
+  $ngx_cache_purge_CONFIG \
+  $ngx_brotli_CONFIG \
+  $ngx_http_headers_more_filter_module_CONFIG \
+  $ngx_http_proxy_connect_module_CONFIG \
+  $modsecurity_nginx_CONFIG \
+  $openssl_CONFIG \
+  $PCRE2_CONFIG
 
 # 编译 Nginx
 echo "开始编译 Nginx..."
@@ -440,42 +646,47 @@ echo "安装 Nginx..."
 make install
 
 # 根据modsecurity官方文档定义文件权限 
-chmod 750 $NGINX_DIR/modules
-chmod 640 $NGINX_DIR/modules/ngx_http_modsecurity_module.so
+[ -d "$NGINX_DIR/modules" ] && chmod 750 "$NGINX_DIR/modules"
+[ -f "$NGINX_DIR/modules/ngx_http_modsecurity_module.so" ] && chmod 640 "$NGINX_DIR/modules/ngx_http_modsecurity_module.so"
+[ -f "$NGINX_DIR/modules/ngx_stream_module.so" ] && chmod 640 "$NGINX_DIR/modules/ngx_stream_module.so"
+[ -f "$NGINX_DIR/modules/ngx_http_image_filter_module.so" ] && chmod 640 "$NGINX_DIR/modules/ngx_http_image_filter_module.so"
 # END 
 
 # 设置 Nginx 服务
 echo "设置 Nginx 服务..."
-cp $NGINX_DIR/sbin/nginx /usr/local/bin/nginx
+cp -f $NGINX_DIR/sbin/nginx /usr/local/bin/nginx
 
-cp -r $NGINX_DIR/nginx/conf $NGINX_DIR/conf
-find $NGINX_DIR/conf -type d -exec chmod 750 {} \;
-find $NGINX_DIR/conf -type f -exec chmod 640 {} \;
+if [ ! -d "$NGINX_DIR/nginx/conf" ]; then
+    cp -r $NGINX_DIR/nginx/conf $NGINX_DIR/conf
+    find $NGINX_DIR/conf -type d -exec chmod 750 {} \;
+    find $NGINX_DIR/conf -type f -exec chmod 640 {} \;
+fi
 
 # 创建ssl证书文件夹
 if [ ! -d "$NGINX_DIR/ssl" ]; then
     mkdir -p "$NGINX_DIR/ssl"
+    chmod 600 $NGINX_DIR/ssl
+    chown root:root $NGINX_DIR/ssl
 fi
-chmod 600 $NGINX_DIR/ssl
-chown root:root $NGINX_DIR/ssl
+
 
 # 创建网站配置文件文件夹
 if [ ! -d "$NGINX_DIR/conf.d" ]; then
     mkdir -p "$NGINX_DIR/conf.d"
+    chmod 600 $NGINX_DIR/conf.d
+    chown root:root $NGINX_DIR/conf.d
 fi
-chmod 600 $NGINX_DIR/conf.d
-chown root:root $NGINX_DIR/conf.d
 
 # 创建网站根目录文件夹
 if [ ! -d "/www/wwwroot" ]; then
     mkdir -p /www/wwwroot
+    chmod -R 755 /www
+    chown -R root:root /www
 fi
-chmod -R 755 /www
-chown -R root:root /www
 
 # 复制默认页文件
 if [ ! -d "/www/wwwroot/html" ]; then
-    cp -r /opt/nginx/nginx/html /www/wwwroot/html
+    cp -r $NGINX_DIR/nginx/html /www/wwwroot/html
 fi
 chmod 544 /www/wwwroot/html
 find /www/wwwroot/html -type f -exec chmod 444 {} \;
@@ -525,54 +736,387 @@ systemctl start nginx
 echo "Nginx 安装完成！可以通过 http://your_server_ip 访问。"
 }
 
-# 卸载 Nginx 的函数
-uninstall_nginx() {
-    # 停止并禁用 Nginx 服务
-    echo "停止 Nginx 服务..."
-    systemctl stop nginx
-    systemctl disable nginx
 
-    # 删除 Nginx 服务文件
-    if [ -f "/etc/systemd/system/nginx.service" ]; then
-       rm -f /etc/systemd/system/nginx.service
+# 升级 Nginx 的函数
+upgrade_nginx() {
+  echo "正在升级 Nginx..."
+
+  # 停止nginx
+  systemctl stop nginx
+
+  read -p "您喜欢将nginx伪装成一个什么名字 禁止使用任何特殊符号仅限英文大小写和空格（例如：OWASP WAF） 留空将不修改使用默认值 默认值是ngixn： " nginx_fake_name
+  read -p "请输入自定义的nginx版本号（例如：5.1.24）留空将不修改使用默认版本号： " nginx_version_number
+
+  # 备份配置文件
+  mkdir -p /tmp/nginx-bak
+  cp -a $NGINX_DIR/conf /tmp/nginx-bak
+  cp -a $NGINX_DIR/conf.d /tmp/nginx-bak
+  cp -a $NGINX_DIR/ssl /tmp/nginx-bak
+  cp -a $NGINX_DIR/logs /tmp/nginx-bak
+  cp -a $NGINX_DIR/src/ModSecurity/modsecurity.conf /tmp/nginx-bak
+
+  # 删除nginx
+  rm -rf $OPT_DIR/nginx-bak
+  mkdir -p /opt/nginx-bak
+
+shopt -s dotglob nullglob
+for item in /opt/nginx/* /opt/nginx/.[!.]* /opt/nginx/..?*; do
+  case "$item" in
+    "/opt/nginx/logs" | "/opt/nginx") ;;
+    *) mv "$item" /opt/nginx-bak/ ;;
+  esac
+done
+shopt -u dotglob nullglob
+
+# 删除运行文件
+[ -f /usr/local/bin/nginx ] && cp -af /usr/local/bin/nginx /usr/local/bin/nginx.bak
+
+# 重新创建 /opt/nginx/src 目录
+if [ ! -d "$NGINX_SRC_DIR" ]; then
+    mkdir -p "$NGINX_SRC_DIR"
+    chmod 750 "$NGINX_SRC_DIR"
+    chown -R root:root "$NGINX_SRC_DIR"
+fi
+
+# 获取最新的稳定版 Nginx 版本
+echo "获取最新的稳定版 Nginx 版本..."
+
+# 这个是获取最新稳定版
+#NGINX_VERSION=$(wget -qO- https://nginx.org/en/download.html | grep -oP 'Stable version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | grep -oP '\d+\.\d+\.\d+')
+
+# 获取 Nginx 主线版本
+NGINX_VERSION=$(curl -s https://nginx.org/en/download.html | grep -oP 'Mainline version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | sed -E 's/.*nginx-([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+if [ -z "$NGINX_VERSION" ]; then
+    echo "未能获取 Nginx 主线版本，请检查下载页面结构"
+    exit 1
+fi
+
+# 下载 Nginx 源码包
+echo "下载 Nginx 源代码..."
+cd $NGINX_DIR || exit 1
+wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz || { echo "下载失败"; exit 1; }
+
+# 解压源码
+tar -zxvf nginx-${NGINX_VERSION}.tar.gz
+if [ -d "$NGINX_DIR/nginx" ]; then
+    rm -rf $NGINX_DIR/nginx
+fi
+mv nginx-${NGINX_VERSION} nginx
+chown -R root:root $NGINX_DIR/nginx
+rm -f nginx-${NGINX_VERSION}.tar.gz
+
+
+# 替换 Nginx 版本信息和错误页标签
+if [ -n "$nginx_fake_name" ] || [ -n "$nginx_version_number" ]; then
+    # 处理特殊字符，但不替换空格
+    nginx_fake_name=$(echo "$nginx_fake_name" | sed 's/[&/\]/\\&/g')
+    nginx_version_number=$(echo "$nginx_version_number" | sed 's/[&/\]/\\&/g')
+
+    # 替换 HTTP 响应头的 server 参数
+    if [ -n "$nginx_fake_name" ]; then
+        sed -i "s/static u_char ngx_http_server_string\[\] = \"Server: nginx\" CRLF;/static u_char ngx_http_server_string\[\] = \"Server: ${nginx_fake_name}\" CRLF;/g" $NGINX_DIR/nginx/src/http/ngx_http_header_filter_module.c
+        sed -i "s/static u_char ngx_http_server_full_string\[\] = \"Server: \" NGINX_VER CRLF;/static u_char ngx_http_server_full_string\[\] = \"Server: ${nginx_fake_name}\" CRLF;/g" $NGINX_DIR/nginx/src/http/ngx_http_header_filter_module.c
+        sed -i "s/static u_char ngx_http_server_build_string\[\] = \"Server: \" NGINX_VER_BUILD CRLF;/static u_char ngx_http_server_build_string\[\] = \"Server: ${nginx_fake_name}\" CRLF;/g" $NGINX_DIR/nginx/src/http/ngx_http_header_filter_module.c
     fi
 
-    # 删除 Nginx 安装目录
+    # 替换 默认错误页的底部标签
+    if [ -n "$nginx_fake_name" ]; then
+        sed -i "s/<hr><center>\" NGINX_VER_BUILD \"<\/center>\" CRLF/<hr><center>${nginx_fake_name}<\/center>\" CRLF/" $NGINX_DIR/nginx/src/http/ngx_http_special_response.c
+        sed -i "s/<hr><center>nginx<\/center>\" CRLF/<hr><center>${nginx_fake_name}<\/center>\" CRLF/" $NGINX_DIR/nginx/src/http/ngx_http_special_response.c
+        sed -i "s/<hr><center>\" NGINX_VER \"<\/center>\" CRLF/<hr><center>${nginx_fake_name}<\/center>\" CRLF/" $NGINX_DIR/nginx/src/http/ngx_http_special_response.c
+    fi
+
+    # 替换 整体宏标签
+    # 注释掉替换 NGINX_VERSION，因为这个已经不必要
+    # if [ -n "$nginx_version_number" ]; then
+    #     sed -i "s/#define NGINX_VERSION      \".*\"/#define NGINX_VERSION      \"${nginx_version_number}\"/" $NGINX_DIR/nginx/src/core/nginx.h
+    # fi
+
+    # if [ -n "$nginx_fake_name" ]; then
+    #     sed -i "s/#define NGINX_VER          \"nginx\/\" NGINX_VERSION/#define NGINX_VER          \"${nginx_fake_name}\"/" $NGINX_DIR/nginx/src/core/nginx.h
+    # fi
+
+    # 输出替换结果
+    if [ -n "$nginx_fake_name" ]; then
+        echo "Nginx 伪装名称已设置为: \"$nginx_fake_name\""
+    fi
+
+    if [ -n "$nginx_version_number" ]; then
+        echo "自定义版本号已设置为: $nginx_version_number"
+    fi
+else
+    echo "未输入任何修改信息，文件未做任何更改。"
+fi
+# 替换nginx信息 EMD
+
+
+# 下载并更新所需的模块
+echo "下载和更新所需的模块..."
+
+# ngx_cache_purge 模块控制
+if [ "$USE_ngx_cache_purge" == "true" ]; then
+    echo "正在安装 ngx_cache_purge..."
+    ngx_cache_purge_install
+    ngx_cache_purge_CONFIG="--add-module=$NGINX_SRC_DIR/ngx_cache_purge"
+else
+    echo "跳过 ngx_cache_purge 安装..."
+    ngx_cache_purge_CONFIG=""
+fi
+
+# ngx_http_headers_more_filter_module 模块控制
+if [ "$USE_ngx_http_headers_more_filter_module" == "true" ]; then
+    echo "正在安装 ngx_http_headers_more_filter_module..."
+    ngx_http_headers_more_filter_module_install
+    ngx_http_headers_more_filter_module_CONFIG="--add-module=$NGINX_SRC_DIR/headers-more-nginx-module"
+else
+    echo "跳过 ngx_cache_purge 安装..."
+    ngx_http_headers_more_filter_module_CONFIG=""
+fi
+
+# ngx_http_proxy_connect_module 模块控制
+if [ "$USE_ngx_http_proxy_connect_module" == "true" ]; then
+    echo "正在安装 ngx_http_proxy_connect_module..."
+    ngx_http_proxy_connect_module_install
+    ngx_http_proxy_connect_module_CONFIG="--add-module=$NGINX_SRC_DIR/ngx_http_proxy_connect_module"
+else
+    echo "跳过 ngx_http_proxy_connect_module 安装..."
+    ngx_http_proxy_connect_module_CONFIG=""
+fi
+
+# PCRE2 模块控制
+if [ "$USE_PCRE2" == "true" ]; then
+    echo "正在安装 PCRE2..."
+    pcre2_install
+    PCRE2_CONFIG="--with-pcre=$NGINX_SRC_DIR/pcre2"
+else
+    echo "跳过 PCRE2 安装..."
+    PCRE2_CONFIG=""
+fi
+
+# ngx_brotli 模块控制
+if [ "$USE_ngx_brotli" == "true" ]; then
+    echo "正在安装 ngx_brotli..."
+    ngx_brotli_install
+    ngx_brotli_CONFIG="--add-module=$NGINX_SRC_DIR/ngx_brotli"
+else
+    echo "跳过 ngx_brotli 安装..."
+    ngx_brotli_CONFIG=""
+fi
+
+# openssl 模块控制
+if [ "$USE_openssl" == "true" ]; then
+    echo "正在安装 openssl..."
+    openssl_install
+    openssl_CONFIG="--with-openssl=$NGINX_SRC_DIR/openssl"
+else
+    echo "跳过 openssl 安装..."
+    openssl_CONFIG=""
+fi
+
+# modsecurity 模块控制
+if [ "$USE_modsecurity" == "true" ]; then
+    echo "正在安装 modsecurity..."
+    modsecurity_install
+else
+    echo "跳过 modsecurity 安装..."
+fi
+
+# modsecurity_nginx 模块控制
+if [ "$USE_modsecurity_nginx" == "true" ]; then
+    echo "正在安装 modsecurity_nginx..."
+    modsecurity_nginx_install
+    # 因为与jemalloc不兼容，所以改为静态模块
+    #modsecurity_nginx_CONFIG="--add-dynamic-module=$NGINX_SRC_DIR/ModSecurity-nginx"
+    modsecurity_nginx_CONFIG="--add-module=$NGINX_SRC_DIR/ModSecurity-nginx"
+else
+    echo "跳过 modsecurity_nginx 安装..."
+    modsecurity_nginx_CONFIG=""
+fi
+
+# 规范 nginx文件权限
+#find $NGINX_DIR/nginx/src -type d -exec chmod 750 {} \;
+#find $NGINX_DIR/nginx/src -type f -exec chmod 640 {} \;
+#chown -R root:root $NGINX_DIR/nginx/src
+
+#find $NGINX_DIR/src -type d -exec chmod 750 {} \;
+#find $NGINX_DIR/src -type f -exec chmod 640 {} \;
+chown -R root:root $NGINX_DIR
+
+
+
+# 配置编译选项
+echo "配置 Nginx 编译选项..."
+cd $NGINX_DIR/nginx || exit 1
+./configure \
+  --prefix=$NGINX_DIR \
+  --user=www-data \
+  --group=www-data \
+  --with-threads \
+  --with-file-aio \
+  --with-pcre-jit \
+  --with-http_ssl_module \
+  --with-http_v2_module \
+  --with-http_v3_module \
+  --with-http_gzip_static_module \
+  --with-http_stub_status_module \
+  --with-http_realip_module \
+  --with-http_auth_request_module \
+  --with-http_sub_module \
+  --with-http_flv_module \
+  --with-http_mp4_module \
+  --with-http_addition_module \
+  --with-http_image_filter_module \
+  --with-http_gunzip_module \
+  --with-stream \
+  --with-stream_ssl_module \
+  --with-stream_ssl_preread_module \
+  --with-compat \
+  --with-cc-opt='-O3 -fPIE -fPIC -march=native -mtune=native -flto -fstack-protector-strong -Wformat -Werror=format-security -D_FORTIFY_SOURCE=2' \
+  --with-ld-opt='-ljemalloc -flto -fPIE -fPIC -pie -Wl,-E -Wl,-z,relro,-z,now -Wl,-O1' \
+  $ngx_cache_purge_CONFIG \
+  $ngx_brotli_CONFIG \
+  $ngx_http_headers_more_filter_module_CONFIG \
+  $ngx_http_proxy_connect_module_CONFIG \
+  $modsecurity_nginx_CONFIG \
+  $openssl_CONFIG \
+  $PCRE2_CONFIG
+
+# 编译 Nginx
+echo "开始编译 Nginx..."
+make -j"$(nproc)"
+
+# 安装 Nginx
+echo "安装 Nginx..."
+make install
+
+
+# 设置 Nginx 服务
+echo "设置 Nginx 服务..."
+cp -f $NGINX_DIR/sbin/nginx /usr/local/bin/nginx
+
+# 恢复配置文件
+cp -af /tmp/nginx-bak/conf $NGINX_DIR/
+cp -af /tmp/nginx-bak/conf.d $NGINX_DIR/
+cp -af /tmp/nginx-bak/ssl $NGINX_DIR/
+cp -af /tmp/nginx-bak/logs $NGINX_DIR/
+cp -af /tmp/nginx-bak/modsecurity.conf $NGINX_DIR/src/ModSecurity/
+rm -rf /tmp/nginx-bak
+
+# 规范文件权限
+[ -f "root:root $NGINX_SRC_DIR/ModSecurity/modsecurity.conf" ] && chown -R root:root "$NGINX_SRC_DIR/ModSecurity/modsecurity.conf"
+[ -f "$NGINX_SRC_DIR/ModSecurity/modsecurity.conf" ] && chmod 600 "$NGINX_SRC_DIR/ModSecurity/modsecurity.conf"
+
+[ -f "$NGINX_DIR/modules/ngx_http_modsecurity_module.so" ] && chmod 640 "$NGINX_DIR/modules/ngx_http_modsecurity_module.so"
+[ -f "$NGINX_DIR/modules/ngx_stream_module.so" ] && chmod 640 "$NGINX_DIR/modules/ngx_stream_module.so"
+[ -f "$NGINX_DIR/modules/ngx_http_image_filter_module.so" ] && chmod 640 "$NGINX_DIR/modules/ngx_http_image_filter_module.so"
+[ -d "$NGINX_DIR/modules" ] && chmod 750 "$NGINX_DIR/modules"
+
+find $NGINX_DIR/conf -type d -exec chmod 750 {} \;
+find $NGINX_DIR/conf -type f -exec chmod 640 {} \;
+
+# 重新加载 systemd 并启动 Nginx
+echo "重新加载 systemd 并启动 Nginx..."
+systemctl daemon-reload
+systemctl enable nginx
+systemctl restart nginx
+
+# 检查 Nginx 是否正常运行
+if systemctl is-active --quiet nginx; then
+    echo "Nginx 启动成功，清理备份目录..."
+    rm -rf "$OPT_DIR/nginx-bak"
+    rm -rf "/usr/local/bin/nginx /usr/local/bin/nginx.bak"
+    echo "Nginx 升级完成！"
+else
+    echo "Nginx启动失败导致升级失败！请检查配置文件。原版本备份目录 $OPT_DIR/nginx-bak 以便排查问题"
+    echo "运行 systemctl status nginx 或 nginx -t 查看启动失败的原因"
+    echo "找不到原因也可以运行以下命令恢复到升级前版本"
+    echo "rm -rf $NGINX_DIR && mv $OPT_DIR/nginx-bak $NGINX_DIR && cp -f /usr/local/bin/nginx.bak /usr/local/bin/nginx && systemctl restart nginx"
+fi
+}
+
+# 卸载 Nginx 的函数
+uninstall_nginx() {
+    echo "停止 Nginx 服务..."
+
+    if command -v nginx >/dev/null 2>&1; then
+        echo "检测到 Nginx 已安装，正在尝试停止和禁用服务..."
+
+        # 如果 nginx.service 存在才尝试操作 systemd 服务
+        if systemctl list-unit-files | grep -q '^nginx\.service'; then
+            systemctl stop nginx || true
+            systemctl disable nginx || true
+        fi
+
+        # 删除可能存在的服务文件
+        rm -f /etc/systemd/system/nginx.service /lib/systemd/system/nginx.service
+
+        # 刷新 systemd 状态
+        systemctl daemon-reexec
+        systemctl daemon-reload
+    else
+        echo "未检测到已安装的 Nginx，跳过服务操作。"
+    fi
+
+    echo "清理 Nginx 安装目录中除 conf / conf.d / ssl /logs 外的内容..."
     if [ -d "$NGINX_DIR" ]; then
-       rm -rf $NGINX_DIR
+        shopt -s dotglob
+        for item in "$NGINX_DIR"/* "$NGINX_DIR"/.*; do
+            case "$item" in
+                "$NGINX_DIR" | "$NGINX_DIR/conf" | "$NGINX_DIR/conf.d" | "$NGINX_DIR/ssl" | "$NGINX_DIR/logs")
+                    ;;
+                *)
+                    rm -rf "$item"
+                    ;;
+            esac
+        done
+        shopt -u dotglob
     fi
 
     # 卸载 ModSecurity 并删除相关文件
-    if [ -d "$modsecurity_dir" ]; then
-       rm -rf $modsecurity_dir
-    fi
+    [ -d "/usr/local/modsecurity" ] && rm -rf "/usr/local/modsecurity"
 
-    # 删除 Nginx 二进制文件
-    if [ -f "/usr/local/bin/nginx" ]; then
-       rm -f /usr/local/bin/nginx
-    fi
+    echo "删除 Nginx 二进制文件..."
+    [ -f "/usr/local/bin/nginx" ] && rm -f /usr/local/bin/nginx
 
-    # 删除 Nginx 配置文件
-    if [ -f "/etc/nginx/nginx.conf" ]; then
-       rm -f /etc/nginx/nginx.conf
-    fi
+    echo "删除默认网页目录..."
+    [ -d "/www/wwwroot/html" ] && echo "如需删除默认网页，请执行：rm -rf /www/wwwroot/html"
 
-    # 删除配置文件夹
-    if [ -d "/etc/nginx/conf.d" ]; then
-       rm -rf /etc/nginx/conf.d
-    fi
+    echo "########### 说明 #######################"
 
-    # 删除 Nginx 默认网页目录
-    if [ -d "/www/wwwroot/html" ]; then
-       rm -rf /www/wwwroot/html
-    fi
-
+    echo "保留配置文件夹：$NGINX_DIR/conf, $NGINX_DIR/conf.d, $NGINX_DIR/ssl, $OPT_DIR/owasp, $NGINX_DIR/logs"
+    echo "如需完全清除 Nginx，请运行：rm -rf $NGINX_DIR $OPT_DIR/owasp"
+    echo "如需清除网站数据，请运行：rm -rf /www"
     echo "Nginx 卸载完成。"
+    echo "######################################"
 }
 
-# 根据选择执行安装或卸载
-if [ "$MODE" == "install" ]; then
-    install_nginx
-elif [ "$MODE" == "uninstall" ]; then
-    uninstall_nginx
+
+# 如果通过参数调用（非交互模式）
+if [[ -n "$1" ]]; then
+  MODE="$1"
+  case "$MODE" in
+    install) install_nginx ;;
+    uninstall) uninstall_nginx ;;
+    upgrade) upgrade_nginx ;;
+    *) echo "无效参数。用法: $0 [install|uninstall|upgrade]"; exit 1 ;;
+  esac
+  exit 0
 fi
+
+# 交互模式
+while true; do
+  echo "请选择操作模式："
+  echo "1. 安装"
+  echo "2. 卸载"
+  echo "3. 升级"
+  echo "4. 退出"
+  read -rp "输入 1、2、3 或 4 进行选择: " choice
+
+  case $choice in
+    1) install_nginx; break ;;
+    2) uninstall_nginx; break ;;
+    3) upgrade_nginx; break ;;
+    4) echo "退出脚本。"; exit 0 ;;
+    *) echo "无效的选择，请输入 1、2、3 或 4。" ;;
+  esac
+done
