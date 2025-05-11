@@ -7,13 +7,8 @@ After=network.target
 Type=forking
 PIDFile=$NGINX_DIR/logs/nginx.pid
 
-# 设置运行用户为 www-data
-User=www-data
-# 设置运行组为 www-data
-Group=www-data
-
 # 启动前修复 SSL 和配置权限，避免敏感文件权限异常
-ExecStartPre=/bin/find $NGINX_DIR/ssl $NGINX_DIR/conf.d -type f -exec chmod 600 {} \;
+#ExecStartPre=/bin/find $NGINX_DIR/ssl $NGINX_DIR/conf.d -type f -exec chmod 600 {} \;
 
 # 启动 nginx 服务（使用指定配置文件）
 ExecStart=/usr/local/bin/nginx -c $NGINX_DIR/conf/nginx.conf
@@ -52,11 +47,11 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 SystemCallFilter=~@debug @mount @reboot @swap @module
 
 # 只读挂载 nginx 配置路径
-ReadOnlyPaths=/opt/nginx
+ReadOnlyPaths=$NGINX_DIR
 # 仅允许日志路径写入
-ReadWritePaths=/opt/nginx/logs /run/nginx.pid
+ReadWritePaths=$NGINX_DIR/logs $NGINX_DIR/logs/nginx.pid
 # 禁止访问这些路径
-InaccessiblePaths=/boot /home /media /mnt /srv /bin /sbin /etc /root /var /usr
+InaccessiblePaths=/bin /sbin /boot /home /media /mnt /srv /root /var $NGINX_DIR/nginx $NGINX_DIR/html $NGINX_DIR/sbin
 # 隐藏其他进程（需要 systemd >= 247）
 ProtectProc=invisible
 
