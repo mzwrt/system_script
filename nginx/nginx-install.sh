@@ -962,12 +962,6 @@ else
 fi
 
 # 规范 nginx文件权限
-#find $NGINX_DIR/nginx/src -type d -exec chmod 750 {} \;
-#find $NGINX_DIR/nginx/src -type f -exec chmod 640 {} \;
-#chown -R root:root $NGINX_DIR/nginx/src
-
-#find $NGINX_DIR/src -type d -exec chmod 750 {} \;
-#find $NGINX_DIR/src -type f -exec chmod 640 {} \;
 chown -R root:root $NGINX_DIR
 
 
