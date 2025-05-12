@@ -220,10 +220,10 @@ echo "Downloading modsecurity.conf..."
 if [ -f $NGINX_SRC_DIR/ModSecurity/modsecurity.conf ]; then
   mv -f $NGINX_SRC_DIR/ModSecurity/modsecurity.conf $NGINX_SRC_DIR/ModSecurity/modsecurity.conf.bak  # 备份旧文件
 fi
-wget -q -O $NGINX_SRC_DIR/ModSecurity/modsecurity.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/ModSecurity%20/modsecurity.conf"
+wget -q -O $NGINX_SRC_DIR/ModSecurity/modsecurity.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/ModSecurity/modsecurity.conf"
 
 # 规范文件权限
-chown -R root:root $NGINX_SRC_DIR/ModSecurity/modsecurity.conf
+chown root:root $NGINX_SRC_DIR/ModSecurity/modsecurity.conf
 chmod 600 $NGINX_SRC_DIR/ModSecurity/modsecurity.conf
 if [ -f $NGINX_SRC_DIR/ModSecurity/modsecurity.conf.bak ]; then
   chmod 600 $NGINX_SRC_DIR/ModSecurity/modsecurity.conf.bak
@@ -285,7 +285,7 @@ if curl -L -o "coreruleset-$owasp_VERSION.tar.gz" "$owasp_DOWNLOAD_URL"; then
         cp -f "/tmp/crs-setup.conf" "$OPT_DIR/owasp/owasp-rules/crs-setup.conf"
     else
         wget -q -O "$OPT_DIR/owasp/owasp-rules/crs-setup.conf" \
-        "https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity%20/crs-setup.conf"
+        "https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity/crs-setup.conf"
     fi
 
     # 设置权限
@@ -340,7 +340,7 @@ if [ -f $OPT_DIR/owasp/conf/hosts.deny ]; then
   mv -f $OPT_DIR/owasp/conf/hosts.deny $OPT_DIR/owasp/conf/hosts.deny.bak
 fi
 wget -q -O $OPT_DIR/owasp/conf/hosts.deny \
-https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity%20/hosts.deny
+https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity/hosts.deny
 
 # 下载 hosts.allow 文件并备份旧文件（如果存在）
 echo "Downloading hosts.allow..."
@@ -348,7 +348,7 @@ if [ -f $OPT_DIR/owasp/conf/hosts.allow ]; then
   mv -f $OPT_DIR/owasp/conf/hosts.allow $OPT_DIR/owasp/conf/hosts.allow.bak
 fi
 wget -q -O $OPT_DIR/owasp/conf/hosts.allow \
-https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity%20/hosts.allow
+https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity/hosts.allow
 
 # 下载 main.conf 文件并备份旧文件（如果存在）
 echo "Downloading main.conf..."
@@ -356,7 +356,7 @@ if [ -f $OPT_DIR/owasp/conf/main.conf ]; then
   mv -f $OPT_DIR/owasp/conf/main.conf $OPT_DIR/owasp/conf/main.conf.bak
 fi
 wget -q -O $OPT_DIR/owasp/conf/main.conf \
-https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity%20/main.conf
+https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity/main.conf
 
 
 # 规范规则文件权限
@@ -582,13 +582,8 @@ else
     echo "跳过 owasp 安装..."
 fi
 
-# 规范 nginx文件权限
-#find $NGINX_DIR/nginx/src -type d -exec chmod 750 {} \;
-#find $NGINX_DIR/nginx/src -type f -exec chmod 640 {} \;
-#chown -R root:root $NGINX_DIR/nginx/src
 
-#find $NGINX_DIR/src -type d -exec chmod 750 {} \;
-#find $NGINX_DIR/src -type f -exec chmod 640 {} \;
+# 将目录的所有权设置为 root 用户
 chown -R root:root $NGINX_DIR
 
 
@@ -649,11 +644,12 @@ make install
 echo "设置 Nginx 服务..."
 cp -f $NGINX_DIR/sbin/nginx /usr/local/bin/nginx
 
-if [ ! -d "$NGINX_DIR/nginx/conf" ]; then
-    cp -r $NGINX_DIR/nginx/conf $NGINX_DIR/conf
-    find $NGINX_DIR/conf -type d -exec chmod 750 {} \;
-    find $NGINX_DIR/conf -type f -exec chmod 640 {} \;
+if [ -d "$NGINX_DIR/nginx/conf" ] && [ ! -d "$NGINX_DIR/conf" ]; then
+    cp -r "$NGINX_DIR/nginx/conf" "$NGINX_DIR/conf"
+    find "$NGINX_DIR/conf" -type d -exec chmod 700 {} \;
+    find "$NGINX_DIR/conf" -type f -exec chmod 600 {} \;
 fi
+
 
 # 创建ssl证书文件夹
 if [ ! -d "$NGINX_DIR/ssl" ]; then
@@ -662,6 +658,24 @@ if [ ! -d "$NGINX_DIR/ssl" ]; then
     chown root:root $NGINX_DIR/ssl
 fi
 
+# 根据 CIS nginx 2.4.2
+# 创建默认网站证书文件夹
+if [ ! -d "$NGINX_DIR/ssl/default" ]; then
+    mkdir -p "$NGINX_DIR/ssl/default"
+    chmod 700 "$NGINX_DIR/ssl/default"
+    chown root:root "$NGINX_DIR/ssl/default"
+fi
+
+# 根据 CIS nginx 2.4.2
+# 创建默认证书
+if [ ! -f /opt/nginx/ssl/default/default.key ] || [ ! -f /opt/nginx/ssl/default/default.pem ]; then
+    openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+      -keyout /opt/nginx/ssl/default/default.key \
+      -out /opt/nginx/ssl/default/default.pem \
+      -subj "/C=XX/ST=Default/L=Default/O=Default/CN=localhost"
+    chmod 400 /opt/nginx/ssl/default/default.key 
+    chmod 600 /opt/nginx/ssl/default/default.pem
+fi
 
 # 创建网站配置文件文件夹
 for dir in conf.d conf.d/sites-available conf.d/sites-enabled; do
@@ -680,31 +694,34 @@ if [ ! -d "/www/wwwroot" ]; then
     chown -R root:root /www
 fi
 
-# 复制默认页文件
+# 根据 CIS nginx 2.5.2
+# 创建默认页目录及文件
 if [ ! -d "/www/wwwroot/html" ]; then
-    cp -r "$NGINX_DIR/nginx/html" /www/wwwroot/html
+    mkdir -p /www/wwwroot/html
+    wget -q -O /www/wwwroot/html/index.html "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/index.html"
 fi
-# 设置目录权限，确保 www-data 可读取
-chmod 544 /www/wwwroot/html
+# 设置属主
+chown -R www-data:www-data /www/wwwroot/html
+# 设置目录权限，确保可读取和进入
+chmod 755 /www/wwwroot/html
 # 所有文件只读
 find /www/wwwroot/html -type f -exec chmod 444 {} \;
-# 所属用户
-chown -R www-data:www-data /www/wwwroot/html
 
 # 配置系统服务
 wget -q -O /etc/systemd/system/nginx.service "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.service"
 
 # 替换文件中的 $NGINX_DIR 为实际的路径
-sed -i "s|\${NGINX_DIR}|$NGINX_DIR|g" /etc/systemd/system/nginx.service
+sed -i "s|\$NGINX_DIR|$NGINX_DIR|g" /etc/systemd/system/nginx.service
 
 # 创建 pid 文件
 touch "$NGINX_DIR/logs/nginx.pid"
+chmod u-x,go-wx "$NGINX_DIR/logs/nginx.pid"
 
 # 下载 proxy.conf 一个优化代理的文件
 if [ -f $NGINX_DIR/conf/proxy.conf ]; then
   wget -q -O $NGINX_DIR/conf/proxy.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/proxy.conf"
   # 替换文件中的 $NGINX_DIR 为实际的路径
-  sed -i "s|\${NGINX_DIR}|$NGINX_DIR|g" $NGINX_DIR/conf/proxy.conf
+  sed -i "s|\$NGINX_DIR|$NGINX_DIR|g" $NGINX_DIR/conf/proxy.conf
 fi
 
 # 设置 nginx 用户
@@ -712,7 +729,13 @@ fi
 wget -q -O $NGINX_DIR/conf/nginx.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.conf"
 
 # 替换文件中的 $NGINX_DIR 为实际的路径
-sed -i "s|\${NGINX_DIR}|$NGINX_DIR|g" $NGINX_DIR/conf/nginx.conf
+sed -i "s|\$NGINX_DIR|$NGINX_DIR|g" $NGINX_DIR/conf/nginx.conf
+
+# 规范文件权限
+find $NGINX_DIR/conf -type d -exec chmod 700 {} \;
+find $NGINX_DIR/conf -type f -exec chmod 600 {} \;
+find $NGINX_DIR/conf.d -type d -exec chmod 700 {} \;
+find $NGINX_DIR/conf.d -type f -exec chmod 600 {} \;
 
 # 重新加载 systemd 并启动 Nginx
 echo "重新加载 systemd 并启动 Nginx..."
@@ -1016,8 +1039,8 @@ rm -rf /tmp/nginx-bak
 [ -f "$NGINX_DIR/modules/ngx_http_image_filter_module.so" ] && chmod 640 "$NGINX_DIR/modules/ngx_http_image_filter_module.so"
 [ -d "$NGINX_DIR/modules" ] && chmod 750 "$NGINX_DIR/modules"
 
-find $NGINX_DIR/conf -type d -exec chmod 750 {} \;
-find $NGINX_DIR/conf -type f -exec chmod 640 {} \;
+find $NGINX_DIR/conf -type d -exec chmod 700 {} \;
+find $NGINX_DIR/conf -type f -exec chmod 600 {} \;
 
 # 重新加载 systemd 并启动 Nginx
 echo "重新加载 systemd 并启动 Nginx..."
