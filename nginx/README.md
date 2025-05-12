@@ -44,12 +44,12 @@
 | proxy.conf     | 反响代理优化和一些安全参数 |
 | cloudflare_ip.sh     | 自动化获取 CloudFlare IP 创建cloudflare_ip.conf 文件供 Nginx 来获取真实 IP               |
 | XXXX.com.conf      | 这个是网站配置文件，根据 CIS Benchmarks 配置同时开启 http3 和 http2                        |
-| crs-setup.conf  | 这个是 OWSCP CRS 规则配置文件，默认安全级别为：3 阻拦代码：403                             |
+| crs-setup.conf  | 这个是 OWASP CRS 规则配置文件，默认安全级别为：3 阻拦代码：403                             |
 | modsecurity.conf  | 这个是 ModSecurity 配置文件                             |
-| main.conf  | 这个是 OWSCP CRS 规则引入文件                             |
-| hosts.deny  | 这个是 OWSCP CRS 规则 IP 黑名单文件。里面有详细说明                             |
-| hosts.allow  | 这个是 OWSCP CRS 规则 IP 白名单文件。里面有详细说明                            |
-| enable.sh  | 这个是 OWSCP CRS 开启文件，留作备用                             |
+| main.conf  | 这个是 OWASP CRS 规则引入文件                             |
+| hosts.deny  | 这个是 OWASP CRS 规则 IP 黑名单文件。里面有详细说明                             |
+| hosts.allow  | 这个是 OWASP CRS 规则 IP 白名单文件。里面有详细说明                            |
+| enable.sh  | 这个是 OWASP CRS 开启文件，留作备用                             |
 
 
 # 📥 支持平台
