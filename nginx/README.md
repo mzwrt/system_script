@@ -52,5 +52,5 @@
 | enable.sh  | 这个是 OWSCP CRS 开启文件，留作备用                             |
 
 
-📥 支持平台
+# 📥 支持平台
 Debian / Ubuntu / 其他基于 APT 的系统
