@@ -35,6 +35,22 @@
 | 性能优化     | 启用 Brotli 压缩与 OpenSSL 最新加密协议               |
 | 插件化      | 所有模块配置集中，便于按需开关或更换版本                       |
 
+# 📌 文件说明
+| 特性       | 描述                                         |
+| -------- | ------------------------------------------ |
+| nginx-install.sh  | 这个是 Nginx 自动化脚本文件                             |
+| nginx.conf | 是 Nginx 配置文件，添加许多优化和安全参数根据 CIS Benchmarks 安全基准配置                  |
+| nginx.service  |  Nginx systemd 单元文件 里面配置了很多安全参数和优化参数，对于高安全环境非常实用                   |
+| proxy.conf     | 反响代理优化和一些安全参数 |
+| cloudflare_ip.sh     | 自动化获取 CloudFlare IP 创建cloudflare_ip.conf 文件供 Nginx 来获取真实 IP               |
+| XXXX.com.conf      | 这个是网站配置文件，根据 CIS Benchmarks 配置同时开启 http3 和 http2                        |
+| crs-setup.conf  | 这个是 OWSCP CRS 规则配置文件，默认安全级别为：3 阻拦代码：403                             |
+| modsecurity.conf  | 这个是 ModSecurity 配置文件                             |
+| main.conf  | 这个是 OWSCP CRS 规则引入文件                             |
+| hosts.deny  | 这个是 OWSCP CRS 规则 IP 黑名单文件。里面有详细说明                             |
+| hosts.allow  | 这个是 OWSCP CRS 规则 IP 白名单文件。里面有详细说明                            |
+| enable.sh  | 这个是 OWSCP CRS 开启文件，留作备用                             |
+
 
 📥 支持平台
 Debian / Ubuntu / 其他基于 APT 的系统
