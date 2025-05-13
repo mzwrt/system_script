@@ -7,9 +7,6 @@ After=network.target
 Type=forking
 PIDFile=$NGINX_DIR/logs/nginx.pid
 
-# 启动前修复 SSL 和配置权限，避免敏感文件权限异常
-#ExecStartPre=/bin/find $NGINX_DIR/ssl $NGINX_DIR/conf.d -type f -exec chmod 600 {} \;
-
 # 明确设置工作目录
 WorkingDirectory=$NGINX_DIR
 
