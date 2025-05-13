@@ -10,9 +10,6 @@ PIDFile=$NGINX_DIR/logs/nginx.pid
 # 启动前修复 SSL 和配置权限，避免敏感文件权限异常
 #ExecStartPre=/bin/find $NGINX_DIR/ssl $NGINX_DIR/conf.d -type f -exec chmod 600 {} \;
 
-# 设置工作目录为配置文件所在路径
-WorkingDirectory=/usr/local/nginx
-
 # 启动 nginx 服务（使用指定配置文件）
 ExecStart=/usr/local/bin/nginx -c $NGINX_DIR/conf/nginx.conf
 ExecReload=/usr/local/bin/nginx -s reload
@@ -42,16 +39,6 @@ ProtectControlGroups=true
 ProtectKernelModules=true
 # 禁止修改内核参数
 ProtectKernelTunables=true
-# 禁止修改系统时间
-ProtectClock=true
-# 禁止修改主机名
-ProtectHostname=true
-# 禁止访问主机设备（如 /dev/sda）
-PrivateDevices=true
-# 限制 /proc 的子系统访问为 pid（增强隔离）
-ProcSubset=pid
-# 禁止访问 /proc/kmsg（内核日志）
-ProtectKernelLogs=true
 # 禁止使用实时调度
 RestrictRealtime=true
 # 限制仅使用网络协议族 IPv4/IPv6/Unix socket
@@ -62,7 +49,7 @@ SystemCallFilter=~@debug @mount @reboot @swap @module
 # 只读挂载 nginx 配置路径
 ReadOnlyPaths=$NGINX_DIR
 # 仅允许日志路径写入
-ReadWritePaths=$NGINX_DIR/logs
+ReadWritePaths=$NGINX_DIR/logs $NGINX_DIR/logs/nginx.pid
 # 禁止访问这些路径
 InaccessiblePaths=/bin /sbin /boot /home /media /mnt /srv /root /var $NGINX_DIR/nginx $NGINX_DIR/html $NGINX_DIR/sbin
 # 隐藏其他进程（需要 systemd >= 247）
