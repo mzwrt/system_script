@@ -7,8 +7,8 @@ Wants=network-online.target
 # 服务行为配置
 [Service]
 Type=simple
-User=xvpn
-Group=xvpn
+User=$USER
+Group=$USER
 WorkingDirectory=$INSTALL_DIR
 ExecStart=$INSTALL_DIR/xray run -config $INSTALL_DIR/config.json
 Restart=on-failure
