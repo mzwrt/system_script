@@ -2,7 +2,6 @@
 
 INSTALL_DIR="/mnt/xray"
 USER="xvpn"
-SERVICE_NAME="xray"
 
 # 创建安装、卸载函数
 install_xray() {
@@ -74,8 +73,8 @@ EOF
 
     # 重新加载 systemd 配置并启动服务
     systemctl daemon-reload
-    systemctl enable xray
-    systemctl start xray
+    systemctl enable xray.service
+    systemctl start xray.service
 
     echo "Xray 安装完成，服务已启动"
 }
@@ -84,8 +83,8 @@ uninstall_xray() {
     echo "开始卸载 Xray..."
 
     # 停止并禁用 xray 服务
-    systemctl stop $SERVICE_NAME
-    systemctl disable $SERVICE_NAME
+    systemctl stop xray.service
+    systemctl disable xray.service
 
     # 删除 systemd 服务文件
     rm -f /etc/systemd/system/xray.service
