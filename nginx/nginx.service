@@ -10,6 +10,9 @@ PIDFile=$NGINX_DIR/logs/nginx.pid
 # 启动前修复 SSL 和配置权限，避免敏感文件权限异常
 #ExecStartPre=/bin/find $NGINX_DIR/ssl $NGINX_DIR/conf.d -type f -exec chmod 600 {} \;
 
+# 明确设置工作目录
+WorkingDirectory=$NGINX_DIR
+
 # 启动 nginx 服务（使用指定配置文件）
 ExecStart=/usr/local/bin/nginx -c $NGINX_DIR/conf/nginx.conf
 ExecReload=/usr/local/bin/nginx -s reload
@@ -54,6 +57,15 @@ ReadWritePaths=$NGINX_DIR/logs
 InaccessiblePaths=/bin /sbin /boot /home /media /srv /root /var /sys /proc /lost+found $NGINX_DIR/nginx $NGINX_DIR/html $NGINX_DIR/sbin
 # 隐藏其他进程（需要 systemd >= 247）
 ProtectProc=invisible
+# 禁止修改主机时间
+ProtectClock=true
+# 防止读取内核日志
+ProtectKernelLogs=true
+# 隐藏 /dev 下大部分设备，仅保留标准输入/输出/错误设备
+PrivateDevices=true
+# 防止服务分配可执行内存
+MemoryDenyWriteExecute=true
+
 
 # 出错时自动重启
 Restart=on-failure
