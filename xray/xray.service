@@ -12,9 +12,9 @@ Wants=network-online.target
 # 使用 simple 类型，直接运行主命令
 Type=simple
 # 以 nobody 用户运行，降低权限，提升安全性
-User=nobody
+User=$USER
 # 设置用户组为 nogroup
-Group=nogroup
+Group=$USER
 # 设置工作目录为配置文件所在路径
 WorkingDirectory=$INSTALL_DIR
 # 启动 Xray，使用指定配置文件
