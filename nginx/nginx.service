@@ -10,6 +10,7 @@ PIDFile=$NGINX_DIR/logs/nginx.pid
 # 明确设置工作目录
 WorkingDirectory=$NGINX_DIR
 
+
 # 启动 nginx 服务（使用指定配置文件）
 ExecStart=/usr/local/bin/nginx -c $NGINX_DIR/conf/nginx.conf
 ExecReload=/usr/local/bin/nginx -s reload
@@ -22,7 +23,7 @@ LimitNPROC=4096
 # 禁止生成 core dump，防止信息泄露
 LimitCORE=0
 # 设置默认文件权限为 750/640（仅属组成员可读）
-UMask=0027
+UMask=0077
 
 # 严格保护 /usr /boot /etc，进程只能只读访问这些目录
 ProtectSystem=strict
@@ -44,7 +45,7 @@ RestrictRealtime=true
 # 限制仅使用网络协议族 IPv4/IPv6/Unix socket
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 # 黑名单过滤不必要系统调用（禁止调试、挂载、重启等）
-SystemCallFilter=~@debug @mount @reboot @swap @module
+SystemCallFilter=~@debug @mount @reboot @swap @module @raw-io @obsolete @cpu-emulation @clock @sysctl @kill
 
 # 只读挂载 nginx 配置路径
 ReadOnlyPaths=$NGINX_DIR
@@ -60,6 +61,8 @@ ProtectClock=true
 ProtectKernelLogs=true
 # 隐藏 /dev 下大部分设备，仅保留标准输入/输出/错误设备
 PrivateDevices=true
+RestrictDevices=yes
+
 # 防止服务分配可执行内存
 MemoryDenyWriteExecute=true
 # 防止进程更改执行平台（如 32/64位模式切换）
@@ -67,9 +70,29 @@ LockPersonality=true
 # 防止创建新用户/网络/mount 等 namespace，减少逃逸攻击面
 RestrictNamespaces=true
 # 禁止写入 /dev/shm 和 /run/shm，防止利用共享内存进行通信或逃逸
-ProtectSHM=true
+#ProtectSHM=true
 # 隔离网络命名空间（仅 root 用户启动时建议）
 RestrictNetworkInterfaces=true
+#  防止创建 SUID/SGID 文件
+RestrictSUIDSGID=yes
+# 限制 CPU 架构调用
+SystemCallArchitectures=native
+# 杀死所有子进程
+KillMode=process
+# 防止内存页锁定
+CapabilityBoundingSet=~CAP_IPC_LOCK
+# 限制某些危险网络功能
+CapabilityBoundingSet=~CAP_NET_ADMIN CAP_NET_RAW CAP_NET_BROADCAST \
+                      CAP_SYS_PACCT CAP_KILL CAP_LINUX_IMMUTABLE \
+                      CAP_BPF CAP_SYS_TTY_CONFIG CAP_SYS_BOOT \
+                      CAP_SYS_CHROOT CAP_BLOCK_SUSPEND CAP_LEASE \
+                      CAP_MAC_ADMIN CAP_MAC_OVERRIDE \
+                      CAP_SYS_PTRACE CAP_SETFCAP \
+                      CAP_AUDIT_CONTROL CAP_AUDIT_WRITE CAP_AUDIT_READ \
+                      CAP_WAKE_ALARM CAP_SYS_ADMIN char-rtc:r
+# 不继承任何 ambient capabilities
+AmbientCapabilities=
+
 
 
 # 出错时自动重启
