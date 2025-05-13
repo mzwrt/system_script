@@ -1,0 +1,79 @@
+# 服务单元描述
+[Unit]
+# 服务描述
+Description=Xray Proxy Service
+# 在网络初始化完成后再启动服务
+After=network-online.target nss-lookup.target
+# 希望网络服务同时启用
+Wants=network-online.target
+
+# 服务行为配置
+[Service]
+# 使用 simple 类型，直接运行主命令
+Type=simple
+# 以 nobody 用户运行，降低权限，提升安全性
+User=nobody
+# 设置用户组为 nogroup
+Group=nogroup
+# 设置工作目录为配置文件所在路径
+WorkingDirectory=$INSTALL_DIR
+# 启动 Xray，使用指定配置文件
+ExecStart=$INSTALL_DIR/xray run -config $INSTALL_DIR/config.json
+# 当服务异常退出时自动重启
+Restart=on-failure
+# 重启前等待 3 秒
+RestartSec=3
+
+# 设置最大文件描述符数量，提高并发连接处理能力
+LimitNOFILE=65536
+# 设置最大进程数，限制资源使用，防止 fork 滥用
+LimitNPROC=2048
+# 允许生成完整的核心转储文件，有利于调试
+LimitCORE=infinity
+# 设置线程栈大小为 8MB，防止内存耗尽
+LimitSTACK=8M
+
+# 设置运行环境变量为生产模式（可用于调试或性能标识）
+Environment=XRAY_RUN_MODE=production
+
+# 禁止服务提升权限（如 setuid）
+NoNewPrivileges=true
+# 使用独立的 /tmp 空间，防止与其他进程共享
+PrivateTmp=true
+# 禁止访问主机设备（如 /dev/sda）
+PrivateDevices=true
+# 系统目录（如 /usr /etc）设为只读，增加保护
+ProtectSystem=strict
+# 禁止访问 /home、/root 等主目录
+ProtectHome=true
+# 禁止加载或卸载内核模块
+ProtectKernelModules=true
+# 禁止访问 cgroup 控制组
+ProtectControlGroups=true
+# 禁止修改系统时间
+ProtectClock=true
+# 禁止修改主机名
+ProtectHostname=true
+# 禁止访问 /proc/kmsg（内核日志）
+ProtectKernelLogs=true
+# 隐藏除自身外的 /proc 中其他进程信息
+ProtectProc=invisible
+# 限制 /proc 的子系统访问为 pid（增强隔离）
+ProcSubset=pid
+
+# 显式允许写入这些目录（其余系统只读）
+ReadWritePaths=$INSTALL_DIR
+
+# 仅保留必要的能力：绑定端口和操作 TUN 接口
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE CAP_NET_ADMIN
+# 提供运行所需的能力集，支持透明代理或 TUN
+AmbientCapabilities=CAP_NET_BIND_SERVICE CAP_NET_ADMIN
+
+# 屏蔽敏感系统调用：挂载、重启、加载模块等
+SystemCallFilter=~@mount @reboot @swap @module
+# 仅允许当前 CPU 架构的系统调用，提升隔离
+SystemCallArchitectures=native
+
+# 设置为默认多用户系统目标的一部分（随系统启动）
+[Install]
+WantedBy=multi-user.target
