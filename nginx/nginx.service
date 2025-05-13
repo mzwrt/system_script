@@ -51,7 +51,7 @@ ReadOnlyPaths=$NGINX_DIR
 # 仅允许日志路径写入
 ReadWritePaths=$NGINX_DIR/logs
 # 禁止访问这些路径
-InaccessiblePaths=/bin /sbin /boot /home /media /mnt /srv /root /var $NGINX_DIR/nginx $NGINX_DIR/html $NGINX_DIR/sbin
+InaccessiblePaths=/bin /sbin /boot /home /media /srv /root /var /sys /proc /lost+found $NGINX_DIR/nginx $NGINX_DIR/html $NGINX_DIR/sbin
 # 隐藏其他进程（需要 systemd >= 247）
 ProtectProc=invisible
 
