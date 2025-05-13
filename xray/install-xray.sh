@@ -49,6 +49,7 @@ install_xray() {
     # 创建 systemd 服务文件
     wget -q -O /etc/systemd/system/xray.service "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/xray/xray.service"
     sed -i "s|\$INSTALL_DIR|$INSTALL_DIR|g" /etc/systemd/system/xray.service
+    sed -i "s|\$USER|$USER|g" /etc/systemd/system/xray.service
     
     # 重新加载 systemd 配置并启动服务
     systemctl daemon-reload
