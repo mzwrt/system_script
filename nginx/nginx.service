@@ -66,6 +66,10 @@ MemoryDenyWriteExecute=true
 LockPersonality=true
 # 防止创建新用户/网络/mount 等 namespace，减少逃逸攻击面
 RestrictNamespaces=true
+# 禁止写入 /dev/shm 和 /run/shm，防止利用共享内存进行通信或逃逸
+ProtectSHM=true
+# 隔离网络命名空间（仅 root 用户启动时建议）
+RestrictNetworkInterfaces=true
 
 
 # 出错时自动重启
