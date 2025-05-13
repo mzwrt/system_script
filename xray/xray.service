@@ -1,40 +1,27 @@
 # 服务单元描述
 [Unit]
-# 服务描述
 Description=Xray Proxy Service
-# 在网络初始化完成后再启动服务
 After=network-online.target nss-lookup.target
-# 希望网络服务同时启用
 Wants=network-online.target
 
 # 服务行为配置
 [Service]
-# 使用 simple 类型，直接运行主命令
 Type=simple
-# 以 nobody 用户运行，降低权限，提升安全性
-User=$USER
-# 设置用户组为 nogroup
-Group=$USER
-# 设置工作目录为配置文件所在路径
+User=xvpn
+Group=xvpn
 WorkingDirectory=$INSTALL_DIR
-# 启动 Xray，使用指定配置文件
 ExecStart=$INSTALL_DIR/xray run -config $INSTALL_DIR/config.json
-# 当服务异常退出时自动重启
 Restart=on-failure
-# 重启前等待 3 秒
 RestartSec=3
 
 # 设置最大文件描述符数量，提高并发连接处理能力
-LimitNOFILE=65536
+LimitNOFILE=1048576
 # 设置最大进程数，限制资源使用，防止 fork 滥用
-LimitNPROC=2048
-# 允许生成完整的核心转储文件，有利于调试
-LimitCORE=infinity
+LimitNPROC=4096
+# 禁止生成核心转储文件，提升安全性
+LimitCORE=0
 # 设置线程栈大小为 8MB，防止内存耗尽
 LimitSTACK=8M
-
-# 设置运行环境变量为生产模式（可用于调试或性能标识）
-Environment=XRAY_RUN_MODE=production
 
 # 禁止服务提升权限（如 setuid）
 NoNewPrivileges=true
@@ -52,8 +39,6 @@ ProtectKernelModules=true
 ProtectControlGroups=true
 # 禁止修改系统时间
 ProtectClock=true
-# 禁止修改主机名
-ProtectHostname=true
 # 禁止访问 /proc/kmsg（内核日志）
 ProtectKernelLogs=true
 # 隐藏除自身外的 /proc 中其他进程信息
@@ -73,6 +58,13 @@ AmbientCapabilities=CAP_NET_BIND_SERVICE CAP_NET_ADMIN
 SystemCallFilter=~@mount @reboot @swap @module
 # 仅允许当前 CPU 架构的系统调用，提升隔离
 SystemCallArchitectures=native
+# 禁止访问这些路径
+InaccessiblePaths=/bin /sbin /boot /home /media /srv /root /var /opt /sys /usr /www /proc /lost+found /lib /lib64
+
+# 额外的内存保护，防止恶意代码注入
+MemoryDenyWriteExecute=true
+# 限制内存锁定，防止进程锁定过多内存，避免内存消耗过多
+LimitMEMLOCK=0
 
 # 设置为默认多用户系统目标的一部分（随系统启动）
 [Install]
