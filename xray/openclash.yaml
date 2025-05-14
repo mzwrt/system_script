@@ -1,0 +1,49 @@
+# 配置示例
+proxies:
+  - name: "XXXX.com"
+    type: vmess
+    server: "XXXX.com"
+    port: 443
+    uuid: XXXX-XXXX-XXXX-XXXX
+    alterId: 0
+    cipher: auto
+    udp: false
+    global-padding: true
+    authenticated-length: true
+    skip-cert-verify: false
+    tls: true
+    client-fingerprint: "chrome"
+    servername: "XXXX.com"
+    network: ws
+    ws-opts:
+      path: "/XXXX"
+      headers:
+        User-Agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+        Referer: "https://www.XXXX.com/"
+        Origin: "https://www.XXXX.com"
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
+        Accept-Language: "zh-CN,zh;q=0.9,en;q=0.8"
+        Accept-Encoding: "br, gzip, deflate, zstd"
+        Cache-Control: "no-store"
+        Pragma: "no-cache"
+        priority: "u=0, i"
+        Connection: "keep-alive"
+        Upgrade-Insecure-Requests: "1"
+        TE: "Trailers"
+        Sec-Fetch-Dest: "document"
+        Sec-Fetch-Mode: "navigate"
+        Sec-Fetch-Site: "none"
+        Sec-Fetch-User: "?1"
+        DNT: "1"
+        Sec-Ch-Ua-Arch: "x86"
+        Sec-Ch-Ua-Bitness: "64"
+        Sec-Ch-Ua-Form-Factors: "Desktop"
+        Sec-Ch-Ua-Full-Version: "136.0.7103.92"
+        Sec-Ch-Ua: '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"'
+        Sec-Ch-Ua-Full-Version-List: '"Chromium";v="136.0.7103.92", "Google Chrome";v="136.0.7103.92", "Not.A/Brand";v="99.0.0.0"'
+        Sec-Ch-Ua-Mobile: "?0"
+        Sec-Ch-Ua-Platform: "Linux"
+        Sec-Ch-Ua-Platform-Version: "6.8.0"
+        X-Frame-Options: "DENY"
+    ip-version: "ipv6-prefer"
+    tfo: false
