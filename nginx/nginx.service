@@ -78,7 +78,7 @@ RestrictSUIDSGID=yes
 # 限制 CPU 架构调用
 SystemCallArchitectures=native
 # 杀死所有子进程
-KillMode=process
+KillMode=control-group
 # 限制某些危险网络功能
 CapabilityBoundingSet=~CAP_IPC_LOCK CAP_NET_ADMIN CAP_NET_RAW CAP_NET_BROADCAST \
                       CAP_SYS_PACCT CAP_LINUX_IMMUTABLE \
@@ -90,6 +90,8 @@ CapabilityBoundingSet=~CAP_IPC_LOCK CAP_NET_ADMIN CAP_NET_RAW CAP_NET_BROADCAST 
                       CAP_WAKE_ALARM CAP_SYS_ADMIN char-rtc:r
 # 不继承任何 ambient capabilities
 AmbientCapabilities=
+
+ProcSubset=pid
 
 
 
