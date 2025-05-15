@@ -8,8 +8,8 @@
     compress     
     delaycompress   
     notifempty      
-    su xvpn xvpn     
-    create 0600 xvpn xvpn 
+    su $USER $USER     
+    create 0600 $USER $USER
 }
 
 # 访问日志的轮换规则
@@ -20,6 +20,6 @@
     compress      
     delaycompress    
     notifempty      
-    su xvpn xvpn   
-    create 0600 xvpn xvpn 
+    su $USER $USER   
+    create 0600 $USER $USER 
 }
