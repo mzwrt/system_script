@@ -42,6 +42,10 @@ install_xray() {
     if [ ! -f $INSTALL_DIR/config.json ]; then
         wget -q -O $INSTALL_DIR/config.json "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/xray/config.json"
     fi
+    # 日志配置
+    if [ ! -f "/etc/logrotate.d/xray" ]; then
+        wget -q -O "/etc/logrotate.d/xray" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/xray/xray"
+    fi
 
     # 设置权限
     chown -R $USER:$USER $INSTALL_DIR
