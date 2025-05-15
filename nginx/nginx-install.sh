@@ -717,12 +717,14 @@ sed -i "s|\$NGINX_DIR|$NGINX_DIR|g" /etc/systemd/system/nginx.service
 touch "$NGINX_DIR/logs/nginx.pid"
 chmod u-x,go-wx "$NGINX_DIR/logs/nginx.pid"
 
-# 下载 proxy.conf 一个优化代理的文件
-if [ -f $NGINX_DIR/conf/proxy.conf ]; then
-  wget -q -O $NGINX_DIR/conf/proxy.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/proxy.conf"
-  # 替换文件中的 $NGINX_DIR 为实际的路径
-  sed -i "s|\$NGINX_DIR|$NGINX_DIR|g" $NGINX_DIR/conf/proxy.conf
+# 如果 proxy.conf 不存在，则下载
+if [ ! -f "$NGINX_DIR/conf/proxy.conf" ]; then
+  wget -q -O "$NGINX_DIR/conf/proxy.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/proxy.conf"
+  
+  # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
+  sed -i "s|\$NGINX_DIR|$NGINX_DIR|g" "$NGINX_DIR/conf/proxy.conf"
 fi
+
 
 # 设置 nginx 用户
 \mv -f "$NGINX_DIR/conf/nginx.conf" "$NGINX_DIR/conf/nginx.conf.bak"
