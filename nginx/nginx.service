@@ -90,7 +90,7 @@ CapabilityBoundingSet=~CAP_IPC_LOCK CAP_NET_ADMIN CAP_NET_RAW CAP_NET_BROADCAST 
                       CAP_WAKE_ALARM CAP_SYS_ADMIN char-rtc:r
 # 不继承任何 ambient capabilities
 AmbientCapabilities=
-
+# 只允许服务访问 /proc 中与本服务相关的 PID 子集
 ProcSubset=pid
 
 
