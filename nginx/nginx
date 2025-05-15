@@ -1,0 +1,14 @@
+/opt/nginx/logs/*.log {
+    daily
+    missingok
+    rotate 60
+    compress
+    delaycompress
+    notifempty
+    create 0600 www-data www-data
+    sharedscripts
+
+    postrotate
+        [ -s /opt/nginx/logs/nginx.pid ] && kill -USR1 $(cat /opt/nginx/logs/nginx.pid)
+    endscript
+}
