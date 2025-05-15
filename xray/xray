@@ -1,0 +1,25 @@
+# xray logrotate configuration
+
+# 错误日志轮换规则
+/var/log/xray_log-error.logs {
+    daily               
+    missingok          
+    rotate 7   
+    compress     
+    delaycompress   
+    notifempty      
+    su xvpn xvpn     
+    create 0600 xvpn xvpn 
+}
+
+# 访问日志的轮换规则
+/var/log/xray_log-access.log {
+    daily            
+    missingok      
+    rotate 7       
+    compress      
+    delaycompress    
+    notifempty      
+    su xvpn xvpn   
+    create 0600 xvpn xvpn 
+}
