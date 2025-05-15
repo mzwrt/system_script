@@ -79,10 +79,8 @@ RestrictSUIDSGID=yes
 SystemCallArchitectures=native
 # 杀死所有子进程
 KillMode=process
-# 防止内存页锁定
-CapabilityBoundingSet=~CAP_IPC_LOCK
 # 限制某些危险网络功能
-CapabilityBoundingSet=~CAP_NET_ADMIN CAP_NET_RAW CAP_NET_BROADCAST \
+CapabilityBoundingSet=~CAP_IPC_LOCK CAP_NET_ADMIN CAP_NET_RAW CAP_NET_BROADCAST \
                       CAP_SYS_PACCT CAP_KILL CAP_LINUX_IMMUTABLE \
                       CAP_BPF CAP_SYS_TTY_CONFIG CAP_SYS_BOOT \
                       CAP_SYS_CHROOT CAP_BLOCK_SUSPEND CAP_LEASE \
