@@ -1,4 +1,4 @@
-/opt/nginx/logs/*.log {
+$NGINX_DIR/logs/*.log {
     daily
     missingok
     rotate 60
@@ -9,6 +9,6 @@
     sharedscripts
 
     postrotate
-        [ -s /opt/nginx/logs/nginx.pid ] && kill -USR1 $(cat /opt/nginx/logs/nginx.pid)
+        [ -s $NGINX_DIR/logs/nginx.pid ] && kill -USR1 $(cat $NGINX_DIR/logs/nginx.pid)
     endscript
 }
