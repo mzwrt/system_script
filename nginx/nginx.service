@@ -23,7 +23,7 @@ LimitNPROC=4096
 # 禁止生成 core dump，防止信息泄露
 LimitCORE=0
 # 设置默认文件权限为 750/640（仅属组成员可读）
-UMask=0077
+UMask=0027
 
 # 严格保护 /usr /boot /etc，进程只能只读访问这些目录
 ProtectSystem=strict
