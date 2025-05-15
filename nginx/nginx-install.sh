@@ -709,7 +709,6 @@ find /www/wwwroot/html -type f -exec chmod 444 {} \;
 
 # 配置系统服务
 wget -q -O /etc/systemd/system/nginx.service "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.service"
-
 # 替换文件中的 $NGINX_DIR 为实际的路径
 sed -i "s|\\$NGINX_DIR|$NGINX_DIR|g" /etc/systemd/system/nginx.service
 
@@ -717,10 +716,9 @@ sed -i "s|\\$NGINX_DIR|$NGINX_DIR|g" /etc/systemd/system/nginx.service
 touch "$NGINX_DIR/logs/nginx.pid"
 chmod u-x,go-wx "$NGINX_DIR/logs/nginx.pid"
 
-# 如果 proxy.conf 不存在，则下载
+# 如果 proxy.conf 代理优化配置文件
 if [ ! -f "$NGINX_DIR/conf/proxy.conf" ]; then
   wget -q -O "$NGINX_DIR/conf/proxy.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/proxy.conf"
-  
   # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
   sed -i "s|\\$NGINX_DIR|$NGINX_DIR|g" "$NGINX_DIR/conf/proxy.conf"
 fi
@@ -729,9 +727,15 @@ fi
 # 设置 nginx 用户
 \mv -f "$NGINX_DIR/conf/nginx.conf" "$NGINX_DIR/conf/nginx.conf.bak"
 wget -q -O $NGINX_DIR/conf/nginx.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.conf"
-
 # 替换文件中的 $NGINX_DIR 为实际的路径
 sed -i "s|\\$NGINX_DIR|$NGINX_DIR|g" $NGINX_DIR/conf/nginx.conf
+
+# 日志配置
+if [ ! -f "/etc/logrotate.d/nginx" ]; then
+  wget -q -O "/etc/logrotate.d/nginx" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx"
+  # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
+  sed -i "s|\\$NGINX_DIR|$NGINX_DIR|g" "/etc/logrotate.d/nginx"
+fi
 
 # 规范文件权限
 find $NGINX_DIR/conf -type d -exec chmod 700 {} \;
