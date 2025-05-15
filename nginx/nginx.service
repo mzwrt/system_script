@@ -43,9 +43,9 @@ ProtectKernelTunables=true
 # 禁止使用实时调度
 RestrictRealtime=true
 # 限制仅使用网络协议族 IPv4/IPv6/Unix socket
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 # 黑名单过滤不必要系统调用（禁止调试、挂载、重启等）
-SystemCallFilter=~@debug @mount @reboot @swap @module @raw-io @obsolete @cpu-emulation @clock @sysctl @kill
+SystemCallFilter=~@debug @mount @reboot @swap @module @raw-io @obsolete @cpu-emulation @clock @sysctl
 
 # 只读挂载 nginx 配置路径
 ReadOnlyPaths=$NGINX_DIR
