@@ -77,11 +77,15 @@ if [ "$ACTION" == "1" ]; then
     chmod 600 "$CONF_FILE"
 
     # 完成提示
+    echo "##################################################"
     echo "✅ 网站 $DOMAIN_INPUT 已创建完成"
     echo "📁 网站根目录：$WEB_ROOT"
     echo "📄 配置文件：$CONF_FILE"
     echo "🔒 SSL 证书目录：$SSL_DIR"
-    echo "🛡️ DH 参数文件：$DHPARAM_FILE"
+    echo "⚠️ 请确保 SSL 证书已经安装或上传在：$SSL_DIR 目录"
+    echo "🛡️ Diffie-Hellman 参数文件：$DHPARAM_FILE"
+    echo "##################################################"
+    
 
 elif [ "$ACTION" == "2" ]; then
     # 删除软链接
