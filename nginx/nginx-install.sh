@@ -766,8 +766,13 @@ echo "🔒 网站SSL证书存放目录：$NGINX_DIR/ssl"
 echo "🌐 网站根目录：/www/wwwroot"
 echo "🛡️ ModSecurity防火墙配置文件目录：$OPT_DIR/owasp/conf"
 echo "⚠️ 注意：未配置默认网站，不能直接访问IP"
-echo "⚠📢 网站配置文件详解：$NGINX_DIR/conf.d/sites-available 是存放网站配置原始文件的 $NGINX_DIR/conf.d/sites-enabled 是启用的网站配置文件软连"
-echo "🧠 创建网站：在 sites-available 文件夹内创建网站配置文件。然后使用 ln -s 将配置文件软连接到 sites-enabled 文件夹内实现启用网站，这样便于管理和使用，如果停用网站直接删除 sites-enabled 内的软连即可"
+echo "⚠📢 网站配置文件详解："
+echo "   $NGINX_DIR/conf.d/sites-available  —— 存放网站配置原始文件"
+echo "   $NGINX_DIR/conf.d/sites-enabled    —— 启用的网站配置文件软连接"
+echo "🧠 创建网站流程："
+echo "   在 sites-available 文件夹内创建网站配置文件。"
+echo "   使用 ln -s 将配置文件软连接到 sites-enabled 文件夹内启用网站。"
+echo "   停用网站只需删除 sites-enabled 内的软连接即可，便于管理。"
 echo "#####################################"
 # 是否删除网站根目录
 read -p "是否加网站？Y将运行添加网站脚本，N退出 (y/n): " ADD_WEB_INSTALL
@@ -775,9 +780,12 @@ echo "#####################################"
 if [[ "$ADD_WEB_INSTALL" =~ ^[Yy]$ ]]; then
     bash /root/site.sh
 else
+    echo "##################################################"
     echo "🚫 已取消添加网站"
-    echo "🔁 添加网站脚本放在：/root/site.sh "
-    echo "🎯 需要添加或者删除网站直接运行：bash /root/site.sh "
+    echo "🔁 添加网站脚本位置：/root/site.sh "
+    echo "🎯 需要添加/删除网站直接运行：bash /root/site.sh "
+    echo "📌 你可以将它放到任意位置和改为自己喜欢的名字以 .sh 结尾即可 "
+    echo "##################################################"
 
 fi
 
