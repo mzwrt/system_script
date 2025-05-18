@@ -85,7 +85,10 @@ if [ "$ACTION" == "1" ]; then
     echo "⚠️ 请确保 SSL 证书已经安装或上传在：$SSL_DIR 目录"
     echo "🛡️ Diffie-Hellman 参数文件：$DHPARAM_FILE"
     echo "##################################################"
-    
+    echo "🔁 添加网站脚本位置：/root/site.sh "
+    echo "🎯 需要添加/删除网站直接运行：bash /root/site.sh "
+    echo "##################################################"
+
 
 elif [ "$ACTION" == "2" ]; then
     # 删除软链接
