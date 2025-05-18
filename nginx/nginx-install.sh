@@ -737,6 +737,14 @@ if [ ! -f "/etc/logrotate.d/nginx" ]; then
   sed -i "s|\\$NGINX_DIR|$NGINX_DIR|g" "/etc/logrotate.d/nginx"
 fi
 
+# 添加网站添加脚本
+if [ ! -f "/root/site.sh" ]; then
+  wget -q -O "/root/site.sh" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/site.sh"
+  # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
+  sed -i "s|/opt/nginx|$NGINX_DIR|g" "/root/site.sh"
+  chmod 600 /root/site.sh
+fi
+
 # 规范文件权限
 find $NGINX_DIR/conf -type d -exec chmod 700 {} \;
 find $NGINX_DIR/conf -type f -exec chmod 600 {} \;
@@ -751,14 +759,28 @@ systemctl start nginx
 
 # 完成
 echo "############# 安装说明 ################"
-echo "nginx 安装目录：$NGINX_DIR"
-echo "网站配置文件存放目录：$NGINX_DIR/conf.d"
-echo "网站SSL证书存放目录：$NGINX_DIR/ssl"
-echo "网站根目录：/www/wwwroot"
-echo "ModSecurity防火墙配置文件目录：$OPT_DIR/owasp/conf"
-echo "注意：未配置默认网站，不能直接访问IP"
-echo "文件 $NGINX_DIR/conf.d/sites-available 是存放网站配置原始文件的 文件 $NGINX_DIR/conf.d/sites-enabled 是启用的网站配置文件软连"
-echo "创建网站：在 sites-available 文件夹内创建网站配置文件。然后使用 ln -s 将配置文件软连接到 sites-enabled 文件夹内实现启用网站，这样便于管理和使用，如果停用网站直接删除 sites-enabled 内的软连即可"
+echo "🎉 恭喜 nginx 安装完成"
+echo "📁 nginx 安装目录：$NGINX_DIR"
+echo "📄 网站配置文件存放目录：$NGINX_DIR/conf.d"
+echo "🔒 网站SSL证书存放目录：$NGINX_DIR/ssl"
+echo "🌐 网站根目录：/www/wwwroot"
+echo "🛡️ ModSecurity防火墙配置文件目录：$OPT_DIR/owasp/conf"
+echo "⚠️ 注意：未配置默认网站，不能直接访问IP"
+echo "⚠📢 网站配置文件详解：$NGINX_DIR/conf.d/sites-available 是存放网站配置原始文件的 $NGINX_DIR/conf.d/sites-enabled 是启用的网站配置文件软连"
+echo "🧠 创建网站：在 sites-available 文件夹内创建网站配置文件。然后使用 ln -s 将配置文件软连接到 sites-enabled 文件夹内实现启用网站，这样便于管理和使用，如果停用网站直接删除 sites-enabled 内的软连即可"
+echo "#####################################"
+# 是否删除网站根目录
+read -p "是否加网站？Y将运行添加网站脚本，N退出 (y/n): " ADD_WEB_INSTALL
+echo "#####################################"
+if [[ "$ADD_WEB_INSTALL" =~ ^[Yy]$ ]]; then
+    bash /root/site.sh
+else
+    echo "🚫 已取消添加网站"
+    echo "🔁 添加网站脚本放在：/root/site.sh "
+    echo "🎯 需要添加或者删除网站直接运行：bash /root/site.sh "
+
+fi
+
 }
 
 
