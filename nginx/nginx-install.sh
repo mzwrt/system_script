@@ -742,12 +742,6 @@ if [ ! -f "$NGINX_DIR/conf/enable-php-84.conf" ]; then
   wget -q -O "$NGINX_DIR/conf/enable-php-84.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/php/enable-php-84.conf"
   chmod 600 $NGINX_DIR/conf/enable-php-84.conf
 fi
-
-# 下载 enable-php-84-wpfastcgi.conf 为后期开启 PHP 作准备 这个是专属 WordPress 的 php-fpm 配置文件
-if [ ! -f "$NGINX_DIR/conf/enable-php-84-wpfastcgi.conf" ]; then
-  wget -q -O "$NGINX_DIR/conf/enable-php-84-wpfastcgi.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/php/enable-php-84-wpfastcgi.conf"
-  chmod 600 $NGINX_DIR/conf/enable-php-84-wpfastcgi.conf
-fi
 # php 配置文件 -- END
 
 # 日志配置
