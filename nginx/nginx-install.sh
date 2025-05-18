@@ -730,6 +730,26 @@ wget -q -O $NGINX_DIR/conf/nginx.conf "https://raw.githubusercontent.com/mzwrt/s
 # 替换文件中的 $NGINX_DIR 为实际的路径
 sed -i "s|\\$NGINX_DIR|$NGINX_DIR|g" $NGINX_DIR/conf/nginx.conf
 
+# php 配置文件 -- START
+# 下载 pathinfo.conf 为后期开启 PHP 作准备
+if [ ! -f "$NGINX_DIR/conf/pathinfo.conf" ]; then
+  wget -q -O "$NGINX_DIR/conf/pathinfo.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/php/pathinfo.conf"
+  chmod 600 $NGINX_DIR/conf/pathinfo.conf
+fi
+
+# 下载 enable-php-84.conf 为后期开启 PHP 作准备 
+if [ ! -f "$NGINX_DIR/conf/enable-php-84.conf" ]; then
+  wget -q -O "$NGINX_DIR/conf/enable-php-84.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/php/enable-php-84.conf"
+  chmod 600 $NGINX_DIR/conf/enable-php-84.conf
+fi
+
+# 下载 enable-php-84-wpfastcgi.conf 为后期开启 PHP 作准备 这个是专属 WordPress 的 php-fpm 配置文件
+if [ ! -f "$NGINX_DIR/conf/enable-php-84-wpfastcgi.conf" ]; then
+  wget -q -O "$NGINX_DIR/conf/enable-php-84-wpfastcgi.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/php/enable-php-84-wpfastcgi.conf"
+  chmod 600 $NGINX_DIR/conf/enable-php-84-wpfastcgi.conf
+fi
+# php 配置文件 -- END
+
 # 日志配置
 if [ ! -f "/etc/logrotate.d/nginx" ]; then
   wget -q -O "/etc/logrotate.d/nginx" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx"
@@ -748,7 +768,7 @@ fi
 # 规范文件权限
 find $NGINX_DIR/conf -type d -exec chmod 700 {} \;
 find $NGINX_DIR/conf -type f -exec chmod 600 {} \;
-find $NGINX_DIR/conf.d -type d -exec chmod 700 {} \;
+find $NGINX_DIR/conf.d -type d -exec chmod 600 {} \;
 find $NGINX_DIR/conf.d -type f -exec chmod 600 {} \;
 
 # 重新加载 systemd 并启动 Nginx
