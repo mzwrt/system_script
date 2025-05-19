@@ -16,3 +16,7 @@ ${SUDO} apt-get update
 
 # 安装命令
 sudo apt install php8.4-cli php8.4-fpm php8.4-common php8.4-mysql php8.4-curl php8.4-mbstring php8.4-xml php8.4-zip php8.4-bcmath php8.4-gd php8.4-imagick php8.4-intl php8.4-soap php8.4-exif php8.4-opcache php8.4-redis
+
+
+# 建议禁用的扩展
+sudo phpdismod sysvmsg sysvsem sysvshm ftp ffi posix readline shmop sockets
