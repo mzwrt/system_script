@@ -64,6 +64,25 @@ install_xray() {
     echo "Xray 安装完成，服务已启动"
 }
 
+# 升级函数
+upgrade_xray() {
+    echo "开始升级 Xray..."
+
+    # 停止服务
+    systemctl stop xray.service
+
+    # 下载最新版本
+    download_xray
+
+    # 修复权限
+    chown -R $USER:$USER $INSTALL_DIR
+
+    # 启动服务
+    systemctl start xray.service
+
+    echo "Xray 升级完成，服务已重新启动"
+}
+
 uninstall_xray() {
     echo "开始卸载 Xray..."
 
@@ -96,22 +115,16 @@ while true; do
     echo "请选择操作:"
     echo "1. 安装 Xray"
     echo "2. 卸载 Xray"
-    echo "3. 退出"
-    read -p "请输入数字 [1-3]: " choice
+    echo "3. 升级 Xray"
+    echo "4. 退出"
+    read -p "请输入数字 [1-4]: " choice
 
     case $choice in
-        1)
-            install_xray
-            ;;
-        2)
-            uninstall_xray
-            ;;
-        3)
-            exit_script
-            ;;
-        *)
-            echo "无效的选择，请输入 1、2 或 3。"
-            ;;
+        1) install_xray ;;
+        2) uninstall_xray ;;
+        3) upgrade_xray ;;
+        4) exit_script ;;
+        *) echo "无效的选择，请输入 1-4。" ;;
     esac
 done
 
