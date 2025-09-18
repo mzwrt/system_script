@@ -3,19 +3,8 @@
 INSTALL_DIR="/mnt/xray"
 USER="xvpn"
 
-# 创建安装、卸载函数
-install_xray() {
-    echo "开始安装 Xray..."
-
-    # 创建用户 'xvpn'，如果不存在
-    if ! id -u $USER &>/dev/null; then
-        echo "创建用户 $USER..."
-        useradd -m -r -s /bin/false $USER
-    fi
-
-    # 确保安装目录存在
-    mkdir -p $INSTALL_DIR
-
+# 下载最新 Xray 版本函数
+download_xray() {
     # 获取最新的 Xray 版本
     LATEST_VERSION=$(curl -s https://api.github.com/repos/XTLS/Xray-core/releases/latest | sed -n 's/.*"tag_name": "\(v[0-9]\+\.[0-9]\+\.[0-9]\+\)".*/\1/p')
 
@@ -35,8 +24,25 @@ install_xray() {
     curl -L $DOWNLOAD_URL -o $INSTALL_DIR/Xray-linux-64.zip
 
     # 解压并清理
-    unzip $INSTALL_DIR/Xray-linux-64.zip -d $INSTALL_DIR
+    unzip -o $INSTALL_DIR/Xray-linux-64.zip -d $INSTALL_DIR
     rm -f $INSTALL_DIR/Xray-linux-64.zip
+}
+
+# 创建安装、卸载函数
+install_xray() {
+    echo "开始安装 Xray..."
+
+    # 创建用户 'xvpn'，如果不存在
+    if ! id -u $USER &>/dev/null; then
+        echo "创建用户 $USER..."
+        useradd -m -r -s /bin/false $USER
+    fi
+
+    # 确保安装目录存在
+    mkdir -p $INSTALL_DIR
+
+    # 下载并安装最新版本
+    download_xray
 
     # 下载配置文件
     if [ ! -f $INSTALL_DIR/config.json ]; then
