@@ -615,8 +615,10 @@ cd $NGINX_DIR/nginx || exit 1
   --with-stream_ssl_module \
   --with-stream_ssl_preread_module \
   --with-compat \
-  --with-cc-opt='-O3 -fPIE -fPIC -march=native -mtune=native -flto -fstack-protector-strong -Wformat -Werror=format-security -D_FORTIFY_SOURCE=2' \
-  --with-ld-opt='-ljemalloc -flto -fPIE -fPIC -pie -Wl,-E -Wl,-z,relro,-z,now -Wl,-O1' \
+  # --with-cc-opt='-O3 -fPIE -fPIC -march=native -mtune=native -flto -fstack-protector-strong -Wformat -Werror=format-security -D_FORTIFY_SOURCE=2' \
+  --with-cc-opt='-O3 -pipe -fPIE -fPIC -march=native -mtune=native -flto=auto -fstack-protector-strong -Wformat -Werror=format-security -D_FORTIFY_SOURCE=3'
+  # --with-ld-opt='-ljemalloc -flto -fPIE -fPIC -pie -Wl,-E -Wl,-z,relro,-z,now -Wl,-O1' \
+  --with-ld-opt='-ljemalloc -flto=auto -fPIE -fPIC -pie -Wl,-z,relro,-z,now -Wl,-O2 -Wl,--as-needed'
   $ngx_cache_purge_CONFIG \
   $ngx_brotli_CONFIG \
   $ngx_http_headers_more_filter_module_CONFIG \
