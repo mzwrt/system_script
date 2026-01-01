@@ -1,127 +1,239 @@
 #!/bin/bash
+set -euo pipefail
 
-# 选择操作类型
-echo "请选择操作："
-echo "1) 创建网站"
-echo "2) 删除网站"
-read -p "请输入选项（1 或 2）: " ACTION
-
-# 输入域名
-read -p "请输入域名（多个域名用空格分隔）: " DOMAIN_INPUT
-FIRST_DOMAIN=$(echo "$DOMAIN_INPUT" | awk '{print $1}')
-MAIN_DOMAIN=$(echo "$FIRST_DOMAIN" | awk -F. '{print $(NF-1)"."$NF}')
-
-WEB_ROOT="/www/wwwroot/$FIRST_DOMAIN"
+# ----------------------------
+# 全局配置
+# ----------------------------
 CONF_DIR="/opt/nginx/conf.d/sites-available"
 ENABLED_DIR="/opt/nginx/conf.d/sites-enabled"
-CONF_FILE="$CONF_DIR/$FIRST_DOMAIN.conf"
-ENABLED_LINK="$ENABLED_DIR/$FIRST_DOMAIN.conf"
-SSL_DIR="/opt/nginx/ssl/$MAIN_DOMAIN"
-DHPARAM_FILE="/opt/nginx/ssl/dhparam.pem"
+SSL_BASE_DIR="/opt/nginx/ssl"
+DHPARAM_FILE="$SSL_BASE_DIR/dhparam.pem"
 TEMPLATE_URL="https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/example.com.conf"
 
-if [ "$ACTION" == "1" ]; then
-    # 创建网站根目录
-    if [ ! -d "$WEB_ROOT" ]; then
-        mkdir -p "$WEB_ROOT"
-        echo "已创建网站目录：$WEB_ROOT"
-    else
-        echo "网站目录已存在：$WEB_ROOT，跳过创建"
-    fi
+NGINX_USER="www-data"
+NGINX_GROUP="www-data"
+ACME_ACCOUNT_CONF="/root/.acme.sh/account.conf"
 
-    # 设置属主
-    chown -R www-data:www-data "$WEB_ROOT"
+# ----------------------------
+# acme.sh 检查
+# ----------------------------
+ACME_ENV="$HOME/.acme.sh/acme.sh.env"
+[ -f "$ACME_ENV" ] && . "$ACME_ENV"
+export PATH="$HOME/.acme.sh:$PATH"
 
-    # 创建配置目录
-    mkdir -p "$CONF_DIR" "$ENABLED_DIR"
-
-    # 下载模板
-    if [ ! -f "$CONF_FILE" ]; then
-        curl -fsSL "$TEMPLATE_URL" -o "$CONF_FILE"
-        if [ ! -f "$CONF_FILE" ]; then
-            echo "❌ 模板下载失败，配置文件未创建"
-            exit 1
-        fi
-        echo "已下载配置模板到：$CONF_FILE"
-    else
-        echo "配置文件已存在：$CONF_FILE，跳过下载"
-    fi
-
-    # 替换配置内容
-    sed -i "s|server_name example.com;|server_name $DOMAIN_INPUT;|g" "$CONF_FILE"
-    sed -i "s|/www/wwwroot/example.com|$WEB_ROOT|g" "$CONF_FILE"
-    sed -i "s|/opt/nginx/ssl/.*/fullchain.pem|$SSL_DIR/fullchain.pem|g" "$CONF_FILE"
-    sed -i "s|/opt/nginx/ssl/.*/privkey.pem|$SSL_DIR/privkey.pem|g" "$CONF_FILE"
-    sed -i "s|/opt/nginx/ssl/.*/ca.pem|$SSL_DIR/ca.pem|g" "$CONF_FILE"
-
-    # 创建 SSL 目录
-    mkdir -p "$SSL_DIR"
-
-    # 生成 dhparam.pem
-    if [ ! -f "$DHPARAM_FILE" ]; then
-        echo "正在生成 dhparam.pem，这可能需要几分钟..."
-        openssl dhparam -out "$DHPARAM_FILE" 2048
-        chmod 400 "$DHPARAM_FILE"
-        echo "已生成 $DHPARAM_FILE 并设置权限为 400"
-    fi
-
-    # 创建软链接
-    if [ ! -L "$ENABLED_LINK" ]; then
-        ln -s "$CONF_FILE" "$ENABLED_LINK"
-        echo "已创建软链接：$ENABLED_LINK"
-    else
-        echo "软链接已存在：$ENABLED_LINK，跳过"
-    fi
-
-    # 权限
-    chmod 600 "$CONF_FILE"
-
-    # 完成提示
-    echo "##################################################"
-    echo "✅ 网站 $DOMAIN_INPUT 已创建完成"
-    echo "📁 网站根目录：$WEB_ROOT"
-    echo "📄 配置文件：$CONF_FILE"
-    echo "🔒 SSL 证书目录：$SSL_DIR"
-    echo "⚠️ 请确保 SSL 证书已经安装或上传在：$SSL_DIR 目录"
-    echo "🛡️ Diffie-Hellman 参数文件：$DHPARAM_FILE"
-    echo "##################################################"
-    echo "🔁 添加网站脚本位置：/root/site.sh "
-    echo "🎯 需要添加/删除网站直接运行：bash /root/site.sh "
-    echo "##################################################"
-
-
-elif [ "$ACTION" == "2" ]; then
-    # 删除软链接
-    if [ -L "$ENABLED_LINK" ]; then
-        rm -f "$ENABLED_LINK"
-        echo "已删除软链接：$ENABLED_LINK"
-    else
-        echo "未找到软链接：$ENABLED_LINK"
-    fi
-
-    # 是否删除网站根目录
-    read -p "是否删除网站根目录 $WEB_ROOT？(y/n): " DEL_WEB
-    if [[ "$DEL_WEB" =~ ^[Yy]$ ]] && [ -d "$WEB_ROOT" ]; then
-        rm -rf "$WEB_ROOT"
-        echo "已删除网站目录：$WEB_ROOT"
-    fi
-
-    # 是否删除配置文件
-    read -p "是否删除配置文件 $CONF_FILE？(y/n): " DEL_CONF
-    if [[ "$DEL_CONF" =~ ^[Yy]$ ]] && [ -f "$CONF_FILE" ]; then
-        rm -f "$CONF_FILE"
-        echo "已删除配置文件：$CONF_FILE"
-    fi
-
-    # 是否删除 SSL 证书目录
-    read -p "是否删除 SSL 证书目录 $SSL_DIR？(y/n): " DEL_SSL
-    if [[ "$DEL_SSL" =~ ^[Yy]$ ]] && [ -d "$SSL_DIR" ]; then
-        rm -rf "$SSL_DIR"
-        echo "已删除 SSL 证书目录：$SSL_DIR"
-    fi
-
-    echo "✅ 网站 $DOMAIN_INPUT 删除操作已完成"
-else
-    echo "❌ 无效选项：$ACTION"
+command -v acme.sh >/dev/null 2>&1 || {
+    echo "❌ 未检测到 acme.sh，请先安装或检查 PATH"
     exit 1
-fi
+}
+
+# ----------------------------
+# 域名校验
+# ----------------------------
+validate_domain() {
+    [[ "$1" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]
+}
+
+# ----------------------------
+# DH 参数生成
+# ----------------------------
+generate_dhparam() {
+    if [ ! -f "$DHPARAM_FILE" ]; then
+        mkdir -p "$(dirname "$DHPARAM_FILE")"
+        echo "正在生成 DH 参数，可能需要几分钟..."
+        openssl dhparam -out "$DHPARAM_FILE" 2048 >/dev/null 2>&1
+        chmod 400 "$DHPARAM_FILE"
+        echo "✅ DH 参数生成完成：$DHPARAM_FILE"
+    fi
+}
+
+# ----------------------------
+# DNS 提供商选择（含退出）
+# ----------------------------
+provider=""
+select_dns_provider() {
+    while true; do
+        echo
+        echo "请选择 DNS 提供商："
+        echo "1) 阿里云"
+        echo "2) Cloudflare"
+        echo "0) 退出"
+        read -r c </dev/tty
+        case "$c" in
+            1) provider="ali"; return ;;
+            2) provider="cf"; return ;;
+            0) echo "已退出"; exit 0 ;;
+            *) echo "❌ 无效选项，请输入 1、2 或 0";;
+        esac
+    done
+}
+
+# ----------------------------
+# DNS API 检测
+# ----------------------------
+setup_dns_api() {
+    case "$provider" in
+        ali)
+            if ! grep -q 'Ali_Key' "$ACME_ACCOUNT_CONF" 2>/dev/null; then
+                echo "首次使用阿里云 DNS，请输入 API 密钥"
+                read -r -p "Ali_Key: " Ali_Key
+                read -r -p "Ali_Secret: " Ali_Secret
+                export Ali_Key Ali_Secret
+                acme.sh --register-account --accountemail "you@example.com" --dns dns_ali
+            fi
+            ;;
+        cf)
+            if ! grep -q 'CF_Token' "$ACME_ACCOUNT_CONF" 2>/dev/null; then
+                echo "首次使用 Cloudflare DNS，请输入 API 密钥"
+                read -r -p "CF_Token: " CF_Token
+                read -r -p "CF_Account: " CF_Account
+                export CF_Token CF_Account
+                acme.sh --register-account --accountemail "you@example.com" --dns dns_cf
+            fi
+            ;;
+    esac
+}
+
+# ----------------------------
+# 证书申请（每个域名单独）
+# ----------------------------
+issue_cert() {
+    local domain="$1"
+
+    if acme.sh --list | grep -qw "$domain"; then
+        echo "✅ 已存在 $domain 证书，跳过申请"
+        return
+    fi
+
+    echo "📄 开始申请 $domain 证书..."
+    if ! acme.sh --issue -d "$domain" --dns dns_"$provider" --keylength 2048; then
+        echo "❌ 证书申请失败：$domain"
+        acme.sh --remove -d "$domain" 2>/dev/null || true
+        return 1
+    fi
+
+    mkdir -p "$SSL_BASE_DIR/$domain"
+    acme.sh --install-cert -d "$domain" \
+        --key-file "$SSL_BASE_DIR/$domain/privkey.pem" \
+        --fullchain-file "$SSL_BASE_DIR/$domain/fullchain.pem" \
+        --ca-file "$SSL_BASE_DIR/$domain/ca.pem" \
+        --reloadcmd "systemctl reload nginx"
+
+    echo "✅ $domain 证书申请完成"
+}
+
+# ----------------------------
+# 检查 Nginx 配置并重载
+# ----------------------------
+nginx_reload() {
+    if nginx -t >/dev/null 2>&1; then
+        systemctl reload nginx
+        echo "✅ Nginx 配置检查通过，已重载"
+    else
+        echo "❌ Nginx 配置有错误，请手动检查"
+        nginx -t
+    fi
+}
+
+# ----------------------------
+# 创建网站
+# ----------------------------
+create_site() {
+    local domains="$1"
+
+    for domain in $domains; do
+        domain="${domain// /}"       # 去掉空格
+        validate_domain "$domain" || { echo "❌ 域名不合法：$domain"; continue; }
+
+        local web="/www/wwwroot/$domain"
+        local conf="$CONF_DIR/$domain.conf"
+
+        # 创建目录
+        mkdir -p "$web" "$CONF_DIR" "$ENABLED_DIR" "$SSL_BASE_DIR/$domain"
+        # 检查 Nginx 用户存在
+        if id "$NGINX_USER" &>/dev/null; then
+            chown -R "$NGINX_USER:$NGINX_GROUP" "$web"
+        fi
+
+        # 下载模板
+        curl -fsSL "$TEMPLATE_URL" -o "$conf"
+
+        # 替换模板变量
+        sed -i \
+            -e "s|%DOMAIN%|$domain|g" \
+            -e "s|%WEB_ROOT%|$web|g" \
+            -e "s|%SSL_DIR%|$SSL_BASE_DIR/$domain|g" \
+            "$conf"
+
+        generate_dhparam
+        issue_cert "$domain" || echo "⚠️ $domain 证书申请失败，可重试"
+
+        ln -sf "$conf" "$ENABLED_DIR/"
+        chmod 600 "$conf"
+
+        echo "✅ 网站创建完成：$domain"
+        echo "📁 网站根目录：$web"
+        echo "📄 配置文件：$conf"
+        echo "🔒 SSL 证书目录：$SSL_BASE_DIR/$domain"
+    done
+
+    nginx_reload
+}
+
+
+# ----------------------------
+# 删除网站
+# ----------------------------
+delete_site() {
+    local domains="$1"
+
+    for domain in $domains; do
+        rm -f "$ENABLED_DIR/$domain.conf"
+
+        read -p "删除网站目录 $domain？(y/n): " a
+        [[ "$a" =~ ^[Yy]$ ]] && rm -rf "/www/wwwroot/$domain"
+
+        read -p "删除配置文件 $domain？(y/n): " b
+        [[ "$b" =~ ^[Yy]$ ]] && rm -f "$CONF_DIR/$domain.conf"
+
+        if acme.sh --list | grep -qw "$domain"; then
+            acme.sh --remove -d "$domain"
+            echo "✅ $domain 证书已撤销"
+        fi
+
+        echo "✅ 网站已删除：$domain"
+    done
+
+    nginx_reload
+}
+
+# ============================
+# 主菜单（含退出）
+# ============================
+while true; do
+    echo
+    echo "请选择操作："
+    echo "1) 创建网站"
+    echo "2) 删除网站"
+    echo "0) 退出"
+    read -r ACTION </dev/tty
+
+    case "$ACTION" in
+        1)
+            read -r -p "请输入域名（空格分隔）: " DOMAIN </dev/tty
+            select_dns_provider
+            setup_dns_api
+            create_site "$DOMAIN"
+            ;;
+        2)
+            read -r -p "请输入域名（空格分隔）: " DOMAIN </dev/tty
+            delete_site "$DOMAIN"
+            ;;
+        0)
+            echo "👋 已退出"
+            exit 0
+            ;;
+        *)
+            echo "❌ 无效选项"
+            ;;
+    esac
+done
