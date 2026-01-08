@@ -16,6 +16,11 @@ OPT_DIR="/opt"
 NGINX_DIR="$OPT_DIR/nginx"  # 安装目录
 NGINX_SRC_DIR="$OPT_DIR/nginx/src"   # 源代码和模块的存放目录
 
+
+# ngx-fancyindex 模块
+# 设置为 false 即不启用
+USE_ngx_fancyindex=true  
+
 # PCRE2 模块
 # 设置为 false 即不启用
 USE_PCRE2=true  
@@ -72,6 +77,18 @@ if [ ! -d "$NGINX_SRC_DIR" ]; then
     chmod 750 "$NGINX_SRC_DIR"
     chown -R root:root "$NGINX_SRC_DIR"
 fi
+
+ngx_fancyindex_install() {
+# 获取 ngx-fancyindex- 最新稳定版版本号
+#echo "获取最新 OpenSSL 稳定版版本..."
+#fancyindex_VERSION=$(wget -qO- https://www.openssl.org/source/ | grep -oP 'openssl-\d+\.\d+\.\d+' | head -1 | sed 's/openssl-//')
+fancyindex_VERSION=0.5.2
+cd $NGINX_SRC_DIR || exit 1
+wget https://github.com/aperezdc/ngx-fancyindex/releases/download/v${fancyindex_VERSION}/ngx-fancyindex-${fancyindex_VERSION}.tar.xz
+tar -xJvf ngx-fancyindex-${fancyindex_VERSION}.tar.xz
+mv ngx-fancyindex-${fancyindex_VERSION} ngx_fancyindex
+rm -f ngx-fancyindex-${fancyindex_VERSION}.tar.xz
+}
 
 openssl_install() {
 # 获取 OpenSSL 最新稳定版版本号
@@ -558,6 +575,16 @@ else
     ngx_brotli_CONFIG=""
 fi
 
+# ngx_fancyindex 模块控制
+if [ "$USE_ngx_fancyindex" == "true" ]; then
+    echo "正在安装 openssl..."
+    ngx_fancyindex_install
+    ngx_fancyindex_CONFIG="--add-module=$NGINX_SRC_DIR/ngx_fancyindex"
+else
+    echo "跳过 openssl 安装..."
+    ngx_fancyindex_CONFIG=""
+fi
+
 # openssl 模块控制
 if [ "$USE_openssl" == "true" ]; then
     echo "正在安装 openssl..."
@@ -637,7 +664,8 @@ cd $NGINX_DIR/nginx || exit 1
   $ngx_http_proxy_connect_module_CONFIG \
   $modsecurity_nginx_CONFIG \
   $openssl_CONFIG \
-  $PCRE2_CONFIG
+  $PCRE2_CONFIG \
+  $ngx_fancyindex_CONFIG
 
 # 编译 Nginx
 echo "开始编译 Nginx..."
@@ -1002,6 +1030,16 @@ else
     ngx_brotli_CONFIG=""
 fi
 
+# ngx_fancyindex 模块控制
+if [ "$USE_ngx_fancyindex" == "true" ]; then
+    echo "正在安装 openssl..."
+    ngx_fancyindex_install
+    ngx_fancyindex_CONFIG="--add-module=$NGINX_SRC_DIR/ngx_fancyindex"
+else
+    echo "跳过 openssl 安装..."
+    ngx_fancyindex_CONFIG=""
+fi
+
 # openssl 模块控制
 if [ "$USE_openssl" == "true" ]; then
     echo "正在安装 openssl..."
@@ -1080,7 +1118,8 @@ cd $NGINX_DIR/nginx || exit 1
   $ngx_http_proxy_connect_module_CONFIG \
   $modsecurity_nginx_CONFIG \
   $openssl_CONFIG \
-  $PCRE2_CONFIG
+  $PCRE2_CONFIG \
+  $ngx_fancyindex_CONFIG
 
 # 编译 Nginx
 echo "开始编译 Nginx..."
