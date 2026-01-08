@@ -164,7 +164,7 @@ create_site() {
 
         # 替换模板变量
         sed -i \
-            -e "s|%SITE_domain%|$SITE_domain|g" \
+            -e "s|%DOMAIN%|$SITE_domain|g" \
             -e "s|%WEB_ROOT%|$web|g" \
             -e "s|%SSL_DIR%|$SITE_SSL_BASE_DIR/$SITE_domain|g" \
             -e "s|%SITE_OPT%|$SITE_OPT|g" \
