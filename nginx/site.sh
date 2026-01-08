@@ -188,7 +188,11 @@ create_site() {
         fi
 
         # 下载模板
-        curl -fsSL "$SITE_TEMPLATE_URL" -o "$SITE_conf"
+        if [ ! -f "$SITE_conf" ]; then
+            curl -fsSL "$SITE_TEMPLATE_URL" -o "$SITE_conf"
+        else
+            echo "File already exists, skipping download."
+        fi
         
 
         # 替换模板变量
