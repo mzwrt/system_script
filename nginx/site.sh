@@ -4,10 +4,11 @@ set -euo pipefail
 # ----------------------------
 # 全局配置
 # ----------------------------
-SITE__DIR="/opt/nginx"
-SITE_CONF_DIR="$SITE__DIR/conf.d/sites-available"
-SITE_ENABLED_DIR="$SITE__DIR/conf.d/sites-enabled"
-SITE_SSL_BASE_DIR="$SITE__DIR/ssl"
+SITE_OPT="/opt"
+SITE_DIR="/opt/nginx"
+SITE_CONF_DIR="$SITE_DIR/conf.d/sites-available"
+SITE_ENABLED_DIR="$SITE_DIR/conf.d/sites-enabled"
+SITE_SSL_BASE_DIR="$SITE_DIR/ssl"
 SITE_DHPARAM_FILE="$SITE_SSL_BASE_DIR/dhparam.pem"
 SITE_TEMPLATE_URL="https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/example.com.conf"
 
@@ -163,6 +164,7 @@ create_site() {
             -e "s|%SITE_domain%|$SITE_domain|g" \
             -e "s|%WEB_ROOT%|$web|g" \
             -e "s|%SSL_DIR%|$SITE_SSL_BASE_DIR/$SITE_domain|g" \
+            -e "s|%SITE_OPT%|$SITE_OPT|g" \
             "$conf"
 
         generate_dhparam
