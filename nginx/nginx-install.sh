@@ -581,8 +581,8 @@ if [ "$USE_modsecurity_nginx" == "true" ]; then
     echo "正在安装 modsecurity_nginx..."
     modsecurity_nginx_install
     # 因为与jemalloc不兼容，所以改为静态模块
+    #modsecurity_nginx_CONFIG="--add-dynamic-module=$NGINX_SRC_DIR/ModSecurity-nginx"
     modsecurity_nginx_CONFIG="--add-module=$NGINX_SRC_DIR/ModSecurity-nginx"
-    #modsecurity_nginx_CONFIG="--add-module=$NGINX_SRC_DIR/ModSecurity-nginx"
 else
     echo "跳过 modsecurity_nginx 安装..."
     modsecurity_nginx_CONFIG=""
@@ -1025,8 +1025,8 @@ if [ "$USE_modsecurity_nginx" == "true" ]; then
     echo "正在安装 modsecurity_nginx..."
     modsecurity_nginx_install
     # 因为与jemalloc不兼容，所以改为静态模块
+    #modsecurity_nginx_CONFIG="--add-dynamic-module=$NGINX_SRC_DIR/ModSecurity-nginx"
     modsecurity_nginx_CONFIG="--add-module=$NGINX_SRC_DIR/ModSecurity-nginx"
-    # modsecurity_nginx_CONFIG="--add-module=$NGINX_SRC_DIR/ModSecurity-nginx"
 else
     echo "跳过 modsecurity_nginx 安装..."
     modsecurity_nginx_CONFIG=""
