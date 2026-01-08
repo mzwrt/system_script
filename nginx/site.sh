@@ -190,6 +190,8 @@ create_site() {
         # 下载模板
         if [ ! -f "$SITE_conf" ]; then
             curl -fsSL "$SITE_TEMPLATE_URL" -o "$SITE_conf"
+            chmod 600 "$SITE_conf"
+            ln -sf "$SITE_conf" "$SITE_ENABLED_DIR/"
         else
             echo "File already exists, skipping download."
         fi
@@ -205,9 +207,6 @@ create_site() {
 
         generate_dhparam
         issue_cert "$SITE_domain" || echo "⚠️ $SITE_domain 证书申请失败，可重试"
-
-        ln -sf "$SITE_conf" "$SITE_ENABLED_DIR/"
-        chmod 600 "$SITE_conf"
 
         echo "✅ 网站创建完成：$SITE_domain"
         echo "📁 网站根目录：$SITE_web"
