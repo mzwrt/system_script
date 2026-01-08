@@ -230,7 +230,7 @@ git submodule update
 # 让 ModSecurity 变为静态模块
 ./build.sh
 ./configure
-make
+make -j$(nproc) || make
 make install
 # 下载 modsecurity.conf 文件并备份旧文件（如果存在）
 echo "Downloading modsecurity.conf..."
@@ -641,7 +641,7 @@ cd $NGINX_DIR/nginx || exit 1
 
 # 编译 Nginx
 echo "开始编译 Nginx..."
-make -j"$(nproc)"
+make -j$(nproc)
 
 # 安装 Nginx
 echo "安装 Nginx..."
@@ -1084,7 +1084,7 @@ cd $NGINX_DIR/nginx || exit 1
 
 # 编译 Nginx
 echo "开始编译 Nginx..."
-make -j"$(nproc)"
+make -j$(nproc)
 
 # 安装 Nginx
 echo "安装 Nginx..."
