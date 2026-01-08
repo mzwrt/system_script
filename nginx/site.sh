@@ -114,11 +114,14 @@ issue_cert() {
     fi
 
     mkdir -p "$SITE_SSL_BASE_DIR/$SITE_domain"
+    chmod 700 "$SITE_SSL_BASE_DIR/$SITE_domain"
     acme.sh --install-cert -d "$SITE_domain" \
         --key-file "$SITE_SSL_BASE_DIR/$SITE_domain/privkey.pem" \
         --fullchain-file "$SITE_SSL_BASE_DIR/$SITE_domain/fullchain.pem" \
         --ca-file "$SITE_SSL_BASE_DIR/$SITE_domain/ca.pem" \
         --reloadcmd "systemctl reload nginx"
+    # 查找目录下的所有文件，并设置权限为 600
+    find "$SITE_SSL_BASE_DIR/$SITE_domain" -type f -exec chmod 600 {} \;
 
     echo "✅ $SITE_domain 证书申请完成"
 }
