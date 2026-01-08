@@ -5,14 +5,14 @@ After=network.target
 
 [Service]
 Type=forking
-PIDFile=$NGINX_DIR/logs/nginx.pid
+PIDFile=%NGINX_DIR%/logs/nginx.pid
 
 # 明确设置工作目录
-WorkingDirectory=$NGINX_DIR
+WorkingDirectory=%NGINX_DIR%
 
 
 # 启动 nginx 服务（使用指定配置文件）
-ExecStart=/usr/local/bin/nginx -c $NGINX_DIR/conf/nginx.conf
+ExecStart=/usr/local/bin/nginx -c %NGINX_DIR%/conf/nginx.conf
 ExecReload=/usr/local/bin/nginx -s reload
 ExecStop=/usr/local/bin/nginx -s stop
 
@@ -49,11 +49,11 @@ RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 SystemCallFilter=~@debug @mount @reboot @swap @module @raw-io @obsolete @cpu-emulation @clock @sysctl
 
 # 只读挂载 nginx 配置路径
-ReadOnlyPaths=$NGINX_DIR
+ReadOnlyPaths=%NGINX_DIR%
 # 仅允许日志路径写入
-ReadWritePaths=$NGINX_DIR/logs
+ReadWritePaths=%NGINX_DIR%/logs
 # 禁止访问这些路径
-InaccessiblePaths=/bin /sbin /boot /home /media /srv /root /var /sys /proc /lost+found $NGINX_DIR/nginx $NGINX_DIR/html $NGINX_DIR/sbin
+InaccessiblePaths=/bin /sbin /boot /home /media /srv /root /var /sys /proc /lost+found %NGINX_DIR%/nginx %NGINX_DIR%/html %NGINX_DIR%/sbin
 # 隐藏其他进程（需要 systemd >= 247）
 ProtectProc=invisible
 # 禁止修改主机时间
