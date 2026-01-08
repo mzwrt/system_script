@@ -10,16 +10,11 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # 定义安装路径和源码路径
+# 可指定安装路径
 OPT_DIR="/opt"
-NGINX_DIR="/opt/nginx"  # 安装目录
-NGINX_SRC_DIR="/opt/nginx/src"   # 源代码和模块的存放目录
-
-# 创建 /opt/nginx/src 目录
-if [ ! -d "$NGINX_SRC_DIR" ]; then
-    mkdir -p "$NGINX_SRC_DIR"
-    chmod 750 "$NGINX_SRC_DIR"
-    chown -R root:root "$NGINX_SRC_DIR"
-fi
+# 下面路径不可改动
+NGINX_DIR="$OPT_DIR/nginx"  # 安装目录
+NGINX_SRC_DIR="$OPT_DIR/nginx/src"   # 源代码和模块的存放目录
 
 # PCRE2 模块
 # 设置为 false 即不启用
@@ -57,10 +52,32 @@ USE_owasp=true
 # 设置为 false 即不启用
 USE_modsecurity_nginx=true
 
+# 获取 OpenSSL 最新稳定版版本号
+# 获取最新 OpenSSL 稳定版版本
+#OPENSSL_VERSION=$(wget -qO- https://www.openssl.org/source/ | grep -oP 'openssl-\d+\.\d+\.\d+' | head -1 | sed 's/openssl-//')
+# 手动指定版本号
+OPENSSL_VERSION=3.5.4
+
+# 手动指定 NGINX 版本
+# NGINX_VERSION=1.28.1
+# 这个是获取最新稳定版
+NGINX_VERSION=$(wget -qO- https://nginx.org/en/download.html | grep -oP 'Stable version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | grep -oP '\d+\.\d+\.\d+')
+# 获取 Nginx 主线版本
+#NGINX_VERSION=$(curl -s https://nginx.org/en/download.html | grep -oP 'Mainline version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | sed -E 's/.*nginx-([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+
+
+# 创建 /opt/nginx/src 目录
+if [ ! -d "$NGINX_SRC_DIR" ]; then
+    mkdir -p "$NGINX_SRC_DIR"
+    chmod 750 "$NGINX_SRC_DIR"
+    chown -R root:root "$NGINX_SRC_DIR"
+fi
+
 openssl_install() {
 # 获取 OpenSSL 最新稳定版版本号
-echo "获取最新 OpenSSL 稳定版版本..."
-OPENSSL_VERSION=$(wget -qO- https://www.openssl.org/source/ | grep -oP 'openssl-\d+\.\d+\.\d+' | head -1 | sed 's/openssl-//')
+#echo "获取最新 OpenSSL 稳定版版本..."
+#OPENSSL_VERSION=$(wget -qO- https://www.openssl.org/source/ | grep -oP 'openssl-\d+\.\d+\.\d+' | head -1 | sed 's/openssl-//')
+#OPENSSL_VERSION=3.5.4
 cd $NGINX_SRC_DIR || exit 1
 wget https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz
 tar -zxvf openssl-${OPENSSL_VERSION}.tar.gz
@@ -90,7 +107,7 @@ if [ -z "$ngx_http_proxy_connect_module_version" ]; then
 fi
 
 # 下载并解压模块
-wget https://github.com/chobits/ngx_http_proxy_connect_module/archive/refs/tags/$ngx_http_proxy_connect_module_version.zip
+wget "https://github.com/chobits/ngx_http_proxy_connect_module/archive/refs/tags/$ngx_http_proxy_connect_module_version.zip"
 if [ $? -ne 0 ]; then
   echo "错误：下载 ngx_http_proxy_connect_module 失败"
   exit 1
@@ -130,13 +147,13 @@ ngx_http_headers_more_filter_module_install() {
 
   # 获取最新 tag（版本号），例如 v0.38
   #ngx_http_headers_more_filter_module_version="v0.38" # 制定版本使用
-  ngx_http_headers_more_filter_module_version=$(curl -s https://api.github.com/repos/openresty/headers-more-nginx-module/tags | grep -o '"name": "[^"]*' | head -n 1 | cut -d '"' -f 4) # 默认自动获取最新版
+  ngx_http_headers_more_filter_module_version=$(curl -s https://api.github.com/repos/openresty/headers-more-nginx-module/tags | grep -o '"name": "[^"]*' | head -n 1 | cut -d '"' -f 4 | sed 's/^v//') # 默认自动获取最新版
 
   # 下载并解压 .tar.gz
-  wget "https://github.com/openresty/headers-more-nginx-module/archive/refs/tags/${ngx_http_headers_more_filter_module_version}.tar.gz"
-  tar -xzf "${ngx_http_headers_more_filter_module_version}.tar.gz"
+  wget "https://github.com/openresty/headers-more-nginx-module/archive/refs/tags/v${ngx_http_headers_more_filter_module_version}.tar.gz"
+  tar -xzf "v${ngx_http_headers_more_filter_module_version}.tar.gz"
   mv "headers-more-nginx-module-${ngx_http_headers_more_filter_module_version#v}" headers-more-nginx-module
-  rm -f "${ngx_http_headers_more_filter_module_version}.tar.gz"
+  rm -f "v${ngx_http_headers_more_filter_module_version}.tar.gz"
 }
 
 
@@ -419,14 +436,11 @@ apt-get install -y \
     libyajl-dev \
     libxml2-dev || { echo "依赖安装失败，开始卸载..."; uninstall_nginx; exit 1; }
 
-# 获取最新的稳定版 Nginx 版本
-echo "获取最新的稳定版 Nginx 版本..."
-
 # 这个是获取最新稳定版
 #NGINX_VERSION=$(wget -qO- https://nginx.org/en/download.html | grep -oP 'Stable version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | grep -oP '\d+\.\d+\.\d+')
 
 # 获取 Nginx 主线版本
-NGINX_VERSION=$(curl -s https://nginx.org/en/download.html | grep -oP 'Mainline version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | sed -E 's/.*nginx-([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+#NGINX_VERSION=$(curl -s https://nginx.org/en/download.html | grep -oP 'Mainline version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | sed -E 's/.*nginx-([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
 if [ -z "$NGINX_VERSION" ]; then
     echo "未能获取 Nginx 主线版本，请检查下载页面结构"
     exit 1
@@ -435,7 +449,7 @@ fi
 # 下载 Nginx 源码包
 echo "下载 Nginx 源代码..."
 cd $NGINX_DIR || exit 1
-wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz || { echo "下载失败"; exit 1; }
+wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz || { echo "nginx下载失败"; exit 1; }
 
 # 解压源码
 tar -zxvf nginx-${NGINX_VERSION}.tar.gz
@@ -567,8 +581,8 @@ if [ "$USE_modsecurity_nginx" == "true" ]; then
     echo "正在安装 modsecurity_nginx..."
     modsecurity_nginx_install
     # 因为与jemalloc不兼容，所以改为静态模块
-    #modsecurity_nginx_CONFIG="--add-dynamic-module=$NGINX_SRC_DIR/ModSecurity-nginx"
-    modsecurity_nginx_CONFIG="--add-module=$NGINX_SRC_DIR/ModSecurity-nginx"
+    modsecurity_nginx_CONFIG="--add-dynamic-module=$NGINX_SRC_DIR/ModSecurity-nginx"
+    #modsecurity_nginx_CONFIG="--add-module=$NGINX_SRC_DIR/ModSecurity-nginx"
 else
     echo "跳过 modsecurity_nginx 安装..."
     modsecurity_nginx_CONFIG=""
@@ -615,10 +629,8 @@ cd $NGINX_DIR/nginx || exit 1
   --with-stream_ssl_module \
   --with-stream_ssl_preread_module \
   --with-compat \
-  # --with-cc-opt='-O3 -fPIE -fPIC -march=native -mtune=native -flto -fstack-protector-strong -Wformat -Werror=format-security -D_FORTIFY_SOURCE=2' \
-  --with-cc-opt='-O3 -pipe -fPIE -fPIC -march=native -mtune=native -flto=auto -fstack-protector-strong -Wformat -Werror=format-security -D_FORTIFY_SOURCE=3'
-  # --with-ld-opt='-ljemalloc -flto -fPIE -fPIC -pie -Wl,-E -Wl,-z,relro,-z,now -Wl,-O1' \
-  --with-ld-opt='-ljemalloc -flto=auto -fPIE -fPIC -pie -Wl,-z,relro,-z,now -Wl,-O2 -Wl,--as-needed'
+  --with-cc-opt='-O3 -pipe -fPIE -fPIC -march=native -mtune=native -flto=auto -fstack-protector-strong -Wformat -Werror=format-security -D_FORTIFY_SOURCE=3' \
+  --with-ld-opt='-ljemalloc -flto=auto -fPIE -fPIC -pie -Wl,-z,relro,-z,now -Wl,-O2 -Wl,--as-needed' \
   $ngx_cache_purge_CONFIG \
   $ngx_brotli_CONFIG \
   $ngx_http_headers_more_filter_module_CONFIG \
@@ -725,6 +737,20 @@ if [ ! -f "$NGINX_DIR/conf/proxy.conf" ]; then
   sed -i "s|\\$NGINX_DIR|$NGINX_DIR|g" "$NGINX_DIR/conf/proxy.conf"
 fi
 
+# 如果 cloudflare_ip.sh 代理优化配置文件
+if [ ! -f "/root/cloudflare_ip.sh" ]; then
+  wget -q -O "/root/cloudflare_ip.sh" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/cloudflare_ip.sh"
+  # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
+  sed -i "s|\\$NGINX_DIR|$NGINX_DIR|g" "/root/cloudflare_ip.sh"
+    # 给 cloudflare_ip.sh 文件添加执行权限
+  chmod +x "/root/cloudflare_ip.sh"
+  chmod 600 "/root/cloudflare_ip.sh"
+  chown root:root "/root/cloudflare_ip.sh"
+  # 运行 cloudflare_ip.sh 脚本
+  "bash /root/cloudflare_ip.sh"
+  # 添加每月1号执行的定时任务
+  echo "0 0 1 * * /root/cloudflare_ip.sh && (crontab -l | grep -v '/root/cloudflare_ip.sh' | crontab -)" | crontab -
+fi
 
 # 设置 nginx 用户
 \mv -f "$NGINX_DIR/conf/nginx.conf" "$NGINX_DIR/conf/nginx.conf.bak"
@@ -757,7 +783,7 @@ fi
 if [ ! -f "/root/site.sh" ]; then
   wget -q -O "/root/site.sh" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/site.sh"
   # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
-  sed -i "s|/opt/nginx|$NGINX_DIR|g" "/root/site.sh"
+  sed -i "s|/opt|$OPT_DIR|g" "/root/site.sh"
   chmod 600 /root/site.sh
 fi
 
@@ -789,6 +815,7 @@ echo "🧠 创建网站流程："
 echo "   在 sites-available 文件夹内创建网站配置文件。"
 echo "   使用 ln -s 将配置文件软连接到 sites-enabled 文件夹内启用网站。"
 echo "   停用网站只需删除 sites-enabled 内的软连接即可，便于管理。"
+echo "   路径 /root/cloudflare_ip.sh 脚本用于获取用户真实IP添加每月执行一次"
 echo "#####################################"
 # 是否删除网站根目录
 read -p "是否加网站？Y将运行添加网站脚本，N退出 (y/n): " ADD_WEB_INSTALL
@@ -857,7 +884,7 @@ echo "获取最新的稳定版 Nginx 版本..."
 #NGINX_VERSION=$(wget -qO- https://nginx.org/en/download.html | grep -oP 'Stable version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | grep -oP '\d+\.\d+\.\d+')
 
 # 获取 Nginx 主线版本
-NGINX_VERSION=$(curl -s https://nginx.org/en/download.html | grep -oP 'Mainline version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | sed -E 's/.*nginx-([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+#NGINX_VERSION=$(curl -s https://nginx.org/en/download.html | grep -oP 'Mainline version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | sed -E 's/.*nginx-([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
 if [ -z "$NGINX_VERSION" ]; then
     echo "未能获取 Nginx 主线版本，请检查下载页面结构"
     exit 1
@@ -866,7 +893,7 @@ fi
 # 下载 Nginx 源码包
 echo "下载 Nginx 源代码..."
 cd $NGINX_DIR || exit 1
-wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz || { echo "下载失败"; exit 1; }
+wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz || { echo "nginx下载失败"; exit 1; }
 
 # 解压源码
 tar -zxvf nginx-${NGINX_VERSION}.tar.gz
@@ -998,8 +1025,8 @@ if [ "$USE_modsecurity_nginx" == "true" ]; then
     echo "正在安装 modsecurity_nginx..."
     modsecurity_nginx_install
     # 因为与jemalloc不兼容，所以改为静态模块
-    #modsecurity_nginx_CONFIG="--add-dynamic-module=$NGINX_SRC_DIR/ModSecurity-nginx"
-    modsecurity_nginx_CONFIG="--add-module=$NGINX_SRC_DIR/ModSecurity-nginx"
+    modsecurity_nginx_CONFIG="--add-dynamic-module=$NGINX_SRC_DIR/ModSecurity-nginx"
+    # modsecurity_nginx_CONFIG="--add-module=$NGINX_SRC_DIR/ModSecurity-nginx"
 else
     echo "跳过 modsecurity_nginx 安装..."
     modsecurity_nginx_CONFIG=""
@@ -1122,7 +1149,7 @@ uninstall_nginx() {
         fi
 
         # 删除可能存在的服务文件
-        rm -f /etc/systemd/system/nginx.service /lib/systemd/system/nginx.service
+        [ -d "/usr/local/modsecurity" ] && rm -rf "/etc/systemd/system/nginx.service /lib/systemd/system/nginx.service"
 
         # 刷新 systemd 状态
         systemctl daemon-reexec
@@ -1148,6 +1175,11 @@ uninstall_nginx() {
 
     # 卸载 ModSecurity 并删除相关文件
     [ -d "/usr/local/modsecurity" ] && rm -rf "/usr/local/modsecurity"
+    
+    #删除 cloudflare_ip.sh 定时任务
+    (crontab -l | grep -v '/root/cloudflare_ip.sh') | crontab -
+    # 删除脚本
+    [ -d "/root/cloudflare_ip.sh" ] && rm -rf "/root/cloudflare_ip.sh"
 
     echo "删除 Nginx 二进制文件..."
     [ -f "/usr/local/bin/nginx" ] && rm -f /usr/local/bin/nginx
