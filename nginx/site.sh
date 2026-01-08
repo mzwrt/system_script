@@ -5,7 +5,7 @@ set -euo pipefail
 # 全局配置
 # ----------------------------
 SITE_OPT="/opt"
-SITE_DIR="/opt/nginx"
+SITE_DIR="$SITE_OPT/nginx"
 SITE_CONF_DIR="$SITE_DIR/conf.d/sites-available"
 SITE_ENABLED_DIR="$SITE_DIR/conf.d/sites-enabled"
 SITE_SSL_BASE_DIR="$SITE_DIR/ssl"
