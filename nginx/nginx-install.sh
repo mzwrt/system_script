@@ -724,7 +724,7 @@ find /www/wwwroot/html -type f -exec chmod 444 {} \;
 # 配置系统服务
 wget -q -O /etc/systemd/system/nginx.service "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.service"
 # 替换文件中的 $NGINX_DIR 为实际的路径
-sed -i "s|\\$NGINX_DIR|$NGINX_DIR|g" /etc/systemd/system/nginx.service
+sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" /etc/systemd/system/nginx.service
 
 # 创建 pid 文件
 touch "$NGINX_DIR/logs/nginx.pid"
@@ -734,14 +734,14 @@ chmod u-x,go-wx "$NGINX_DIR/logs/nginx.pid"
 if [ ! -f "$NGINX_DIR/conf/proxy.conf" ]; then
   wget -q -O "$NGINX_DIR/conf/proxy.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/proxy.conf"
   # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
-  sed -i "s|\\$NGINX_DIR|$NGINX_DIR|g" "$NGINX_DIR/conf/proxy.conf"
+  sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" "$NGINX_DIR/conf/proxy.conf"
 fi
 
 # 如果 cloudflare_ip.sh 代理优化配置文件
 if [ ! -f "/root/cloudflare_ip.sh" ]; then
   wget -q -O "/root/cloudflare_ip.sh" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/cloudflare_ip.sh"
   # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
-  sed -i "s|\\$NGINX_DIR|$NGINX_DIR|g" "/root/cloudflare_ip.sh"
+  sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" "/root/cloudflare_ip.sh"
     # 给 cloudflare_ip.sh 文件添加执行权限
   chmod +x "/root/cloudflare_ip.sh"
   chmod 600 "/root/cloudflare_ip.sh"
@@ -756,7 +756,7 @@ fi
 \mv -f "$NGINX_DIR/conf/nginx.conf" "$NGINX_DIR/conf/nginx.conf.bak"
 wget -q -O $NGINX_DIR/conf/nginx.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.conf"
 # 替换文件中的 $NGINX_DIR 为实际的路径
-sed -i "s|\\$NGINX_DIR|$NGINX_DIR|g" $NGINX_DIR/conf/nginx.conf
+sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" $NGINX_DIR/conf/nginx.conf
 
 # php 配置文件 -- START
 # 下载 pathinfo.conf 为后期开启 PHP 作准备
@@ -776,7 +776,7 @@ fi
 if [ ! -f "/etc/logrotate.d/nginx" ]; then
   wget -q -O "/etc/logrotate.d/nginx" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx"
   # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
-  sed -i "s|\\$NGINX_DIR|$NGINX_DIR|g" "/etc/logrotate.d/nginx"
+  sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" "/etc/logrotate.d/nginx"
 fi
 
 # 添加网站添加脚本
