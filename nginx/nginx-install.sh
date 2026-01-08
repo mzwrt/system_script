@@ -747,7 +747,7 @@ if [ ! -f "/root/cloudflare_ip.sh" ]; then
   chmod 600 "/root/cloudflare_ip.sh"
   chown root:root "/root/cloudflare_ip.sh"
   # 运行 cloudflare_ip.sh 脚本
-  "bash /root/cloudflare_ip.sh"
+  bash /root/cloudflare_ip.sh
   # 添加每月1号执行的定时任务
   echo "0 0 1 * * /root/cloudflare_ip.sh && (crontab -l | grep -v '/root/cloudflare_ip.sh' | crontab -)" | crontab -
 fi
