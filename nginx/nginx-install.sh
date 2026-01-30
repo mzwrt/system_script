@@ -124,7 +124,7 @@ if [ -z "$ngx_http_proxy_connect_module_version" ]; then
 fi
 
 # 下载并解压模块
-wget "https://github.com/chobits/ngx_http_proxy_connect_module/archive/refs/tags/$ngx_http_proxy_connect_module_version.zip"
+wget --tries=5 --waitretry=2 "https://github.com/chobits/ngx_http_proxy_connect_module/archive/refs/tags/$ngx_http_proxy_connect_module_version.zip"
 if [ $? -ne 0 ]; then
   echo "错误：下载 ngx_http_proxy_connect_module 失败"
   exit 1
@@ -167,7 +167,7 @@ ngx_http_headers_more_filter_module_install() {
   ngx_http_headers_more_filter_module_version=$(curl -s https://api.github.com/repos/openresty/headers-more-nginx-module/tags | grep -o '"name": "[^"]*' | head -n 1 | cut -d '"' -f 4 | sed 's/^v//') # 默认自动获取最新版
 
   # 下载并解压 .tar.gz
-  wget "https://github.com/openresty/headers-more-nginx-module/archive/refs/tags/v${ngx_http_headers_more_filter_module_version}.tar.gz"
+  wget --tries=5 --waitretry=2 "https://github.com/openresty/headers-more-nginx-module/archive/refs/tags/v${ngx_http_headers_more_filter_module_version}.tar.gz"
   tar -xzf "v${ngx_http_headers_more_filter_module_version}.tar.gz"
   mv "headers-more-nginx-module-${ngx_http_headers_more_filter_module_version#v}" headers-more-nginx-module
   rm -f "v${ngx_http_headers_more_filter_module_version}.tar.gz"
@@ -182,7 +182,7 @@ ngx_cache_purge_install() {
     cd "$NGINX_SRC_DIR" || { echo "无法切换到 ngx_cache_purge 目录 $NGINX_SRC_DIR"; exit 1; }
 
     # 下载对应版本的 ZIP 文件
-    wget "https://github.com/FRiCKLE/ngx_cache_purge/archive/refs/tags/$ngx_cache_purge_version.zip" || { echo "下载 ngx_cache_purge 版本 $ngx_cache_purge_version 失败"; exit 1; }
+    wget --tries=5 --waitretry=2 "https://github.com/FRiCKLE/ngx_cache_purge/archive/refs/tags/$ngx_cache_purge_version.zip" || { echo "下载 ngx_cache_purge 版本 $ngx_cache_purge_version 失败"; exit 1; }
 
     # 解压下载的文件
     unzip "$ngx_cache_purge_version.zip" || { echo "解压 ngx_cache_purge 文件失败"; exit 1; }
