@@ -59,14 +59,14 @@ USE_modsecurity_nginx=true
 
 # 获取 OpenSSL 最新稳定版版本号
 # 获取最新 OpenSSL 稳定版版本
-#OPENSSL_VERSION=$(wget -qO- https://www.openssl.org/source/ | grep -oP 'openssl-\d+\.\d+\.\d+' | head -1 | sed 's/openssl-//')
+#OPENSSL_VERSION=$(wget -qO- --tries=5 --waitretry=2 https://www.openssl.org/source/ | grep -oP 'openssl-\d+\.\d+\.\d+' | head -1 | sed 's/openssl-//')
 # 手动指定版本号
 OPENSSL_VERSION=3.5.4
 
 # 手动指定 NGINX 版本
 # NGINX_VERSION=1.28.1
 # 这个是获取最新稳定版
-NGINX_VERSION=$(wget -qO- https://nginx.org/en/download.html | grep -oP 'Stable version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | grep -oP '\d+\.\d+\.\d+')
+NGINX_VERSION=$(wget -qO- --tries=5 --waitretry=2 https://nginx.org/en/download.html | grep -oP 'Stable version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | grep -oP '\d+\.\d+\.\d+')
 # 获取 Nginx 主线版本
 #NGINX_VERSION=$(curl -s --retry 5 --retry-delay 2 https://nginx.org/en/download.html | grep -oP 'Mainline version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | sed -E 's/.*nginx-([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
 
@@ -81,10 +81,10 @@ fi
 ngx_fancyindex_install() {
 # 获取 ngx-fancyindex- 最新稳定版版本号
 #echo "获取最新 OpenSSL 稳定版版本..."
-#fancyindex_VERSION=$(wget -qO- https://www.openssl.org/source/ | grep -oP 'openssl-\d+\.\d+\.\d+' | head -1 | sed 's/openssl-//')
+#fancyindex_VERSION=$(wget --tries=5 --waitretry=2 -qO- https://www.openssl.org/source/ | grep -oP 'openssl-\d+\.\d+\.\d+' | head -1 | sed 's/openssl-//')
 fancyindex_VERSION=0.5.2
 cd $NGINX_SRC_DIR || exit 1
-wget https://github.com/aperezdc/ngx-fancyindex/releases/download/v${fancyindex_VERSION}/ngx-fancyindex-${fancyindex_VERSION}.tar.xz
+wget --tries=5 --waitretry=2 https://github.com/aperezdc/ngx-fancyindex/releases/download/v${fancyindex_VERSION}/ngx-fancyindex-${fancyindex_VERSION}.tar.xz
 tar -xJvf ngx-fancyindex-${fancyindex_VERSION}.tar.xz
 mv ngx-fancyindex-${fancyindex_VERSION} ngx_fancyindex
 rm -f ngx-fancyindex-${fancyindex_VERSION}.tar.xz
@@ -93,10 +93,10 @@ rm -f ngx-fancyindex-${fancyindex_VERSION}.tar.xz
 openssl_install() {
 # 获取 OpenSSL 最新稳定版版本号
 #echo "获取最新 OpenSSL 稳定版版本..."
-#OPENSSL_VERSION=$(wget -qO- https://www.openssl.org/source/ | grep -oP 'openssl-\d+\.\d+\.\d+' | head -1 | sed 's/openssl-//')
+#OPENSSL_VERSION=$(wget -qO- --tries=5 --waitretry=2 https://www.openssl.org/source/ | grep -oP 'openssl-\d+\.\d+\.\d+' | head -1 | sed 's/openssl-//')
 #OPENSSL_VERSION=3.5.4
 cd $NGINX_SRC_DIR || exit 1
-wget https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz
+wget --tries=5 --waitretry=2 https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz
 tar -zxvf openssl-${OPENSSL_VERSION}.tar.gz
 mv openssl-${OPENSSL_VERSION} openssl
 rm -f openssl-${OPENSSL_VERSION}.tar.gz
@@ -254,7 +254,7 @@ echo "Downloading modsecurity.conf..."
 if [ -f $NGINX_SRC_DIR/ModSecurity/modsecurity.conf ]; then
   mv -f $NGINX_SRC_DIR/ModSecurity/modsecurity.conf $NGINX_SRC_DIR/ModSecurity/modsecurity.conf.bak  # 备份旧文件
 fi
-wget -q -O $NGINX_SRC_DIR/ModSecurity/modsecurity.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/ModSecurity/modsecurity.conf"
+wget -q -O --tries=5 --waitretry=2 $NGINX_SRC_DIR/ModSecurity/modsecurity.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/ModSecurity/modsecurity.conf"
 
 # 规范文件权限
 chown root:root $NGINX_SRC_DIR/ModSecurity/modsecurity.conf
@@ -318,7 +318,7 @@ if curl -L -o --retry 5 --retry-delay 2 "coreruleset-$owasp_VERSION.tar.gz" "$ow
     if [ -f "/tmp/crs-setup.conf" ]; then
         cp -f "/tmp/crs-setup.conf" "$OPT_DIR/owasp/owasp-rules/crs-setup.conf"
     else
-        wget -q -O "$OPT_DIR/owasp/owasp-rules/crs-setup.conf" \
+        wget -q -O --tries=5 --waitretry=2 "$OPT_DIR/owasp/owasp-rules/crs-setup.conf" \
         "https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity/crs-setup.conf"
     fi
 
@@ -342,19 +342,19 @@ mkdir -p "$OPT_DIR/owasp/owasp-rules/plugins"
 
 # 添加 WordPress 常用的 Nginx 拒绝规则配置文件
 if [ ! -f $OPT_DIR/owasp/conf/nginx-wordpress.conf ]; then
-   wget -c -T 20 -O $OPT_DIR/owasp/conf/nginx-wordpress.conf \
+   wget -c -T 20 -O --tries=5 --waitretry=2 $OPT_DIR/owasp/conf/nginx-wordpress.conf \
    https://gist.githubusercontent.com/nfsarmento/57db5abba08b315b67f174cd178bea88/raw/b0768871c3349fdaf549a24268cb01b2be145a6a/nginx-wordpress.conf
 fi
 
 echo "Downloading WordPress 规则排除插件"
 # 下载 wordpress-rule-exclusions-before.conf 和 wordpress-rule-exclusions-config.conf 文件
 if [ ! -f $OPT_DIR/owasp/owasp-rules/plugins/wordpress-rule-exclusions-before.conf ]; then
-  wget -q -O $OPT_DIR/owasp/owasp-rules/plugins/wordpress-rule-exclusions-before.conf \
+  wget -q -O --tries=5 --waitretry=2 $OPT_DIR/owasp/owasp-rules/plugins/wordpress-rule-exclusions-before.conf \
   https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/master/plugins/wordpress-rule-exclusions-before.conf
 fi
 
 if [ ! -f $OPT_DIR/owasp/owasp-rules/plugins/wordpress-rule-exclusions-config.conf ]; then
-  wget -q -O $OPT_DIR/owasp/owasp-rules/plugins/wordpress-rule-exclusions-config.conf \
+  wget -q -O --tries=5 --waitretry=2 $OPT_DIR/owasp/owasp-rules/plugins/wordpress-rule-exclusions-config.conf \
   https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/master/plugins/wordpress-rule-exclusions-config.conf
 fi
 
@@ -373,7 +373,7 @@ echo "Downloading hosts.deny..."
 if [ -f $OPT_DIR/owasp/conf/hosts.deny ]; then
   mv -f $OPT_DIR/owasp/conf/hosts.deny $OPT_DIR/owasp/conf/hosts.deny.bak
 fi
-wget -q -O $OPT_DIR/owasp/conf/hosts.deny \
+wget -q -O --tries=5 --waitretry=2 $OPT_DIR/owasp/conf/hosts.deny \
 https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity/hosts.deny
 
 # 下载 hosts.allow 文件并备份旧文件（如果存在）
@@ -381,7 +381,7 @@ echo "Downloading hosts.allow..."
 if [ -f $OPT_DIR/owasp/conf/hosts.allow ]; then
   mv -f $OPT_DIR/owasp/conf/hosts.allow $OPT_DIR/owasp/conf/hosts.allow.bak
 fi
-wget -q -O $OPT_DIR/owasp/conf/hosts.allow \
+wget -q -O --tries=5 --waitretry=2 $OPT_DIR/owasp/conf/hosts.allow \
 https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity/hosts.allow
 
 # 下载 main.conf 文件并备份旧文件（如果存在）
@@ -389,7 +389,7 @@ echo "Downloading main.conf..."
 if [ -f $OPT_DIR/owasp/conf/main.conf ]; then
   mv -f $OPT_DIR/owasp/conf/main.conf $OPT_DIR/owasp/conf/main.conf.bak
 fi
-wget -q -O $OPT_DIR/owasp/conf/main.conf \
+wget -q -O --tries=5 --waitretry=2 $OPT_DIR/owasp/conf/main.conf \
 https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity/main.conf
 
 
@@ -453,7 +453,7 @@ apt-get install -y \
     libxml2-dev || { echo "依赖安装失败，开始卸载..."; uninstall_nginx; exit 1; }
 
 # 这个是获取最新稳定版
-#NGINX_VERSION=$(wget -qO- https://nginx.org/en/download.html | grep -oP 'Stable version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | grep -oP '\d+\.\d+\.\d+')
+#NGINX_VERSION=$(wget -qO- --tries=5 --waitretry=2 https://nginx.org/en/download.html | grep -oP 'Stable version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | grep -oP '\d+\.\d+\.\d+')
 
 # 获取 Nginx 主线版本
 #NGINX_VERSION=$(curl -s --retry 5 --retry-delay 2 https://nginx.org/en/download.html | grep -oP 'Mainline version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | sed -E 's/.*nginx-([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
@@ -465,7 +465,7 @@ fi
 # 下载 Nginx 源码包
 echo "下载 Nginx 源代码..."
 cd $NGINX_DIR || exit 1
-wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz || { echo "nginx下载失败"; exit 1; }
+wget --tries=5 --waitretry=2 https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz || { echo "nginx下载失败"; exit 1; }
 
 # 解压源码
 tar -zxvf nginx-${NGINX_VERSION}.tar.gz
@@ -739,7 +739,7 @@ fi
 # 创建默认页目录及文件
 if [ ! -d "/www/wwwroot/html" ]; then
     mkdir -p /www/wwwroot/html
-    wget -q -O /www/wwwroot/html/index.html "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/index.html"
+    wget -q -O --tries=5 --waitretry=2 /www/wwwroot/html/index.html "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/index.html"
 fi
 # 设置属主
 chown -R www-data:www-data /www/wwwroot/html
@@ -749,7 +749,7 @@ chmod 755 /www/wwwroot/html
 find /www/wwwroot/html -type f -exec chmod 444 {} \;
 
 # 配置系统服务
-wget -q -O /etc/systemd/system/nginx.service "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.service"
+wget -q -O --tries=5 --waitretry=2 /etc/systemd/system/nginx.service "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.service"
 # 替换文件中的 $NGINX_DIR 为实际的路径
 sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" /etc/systemd/system/nginx.service
 
@@ -759,14 +759,14 @@ chmod u-x,go-wx "$NGINX_DIR/logs/nginx.pid"
 
 # 如果 proxy.conf 代理优化配置文件
 if [ ! -f "$NGINX_DIR/conf/proxy.conf" ]; then
-  wget -q -O "$NGINX_DIR/conf/proxy.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/proxy.conf"
+  wget -q -O --tries=5 --waitretry=2 "$NGINX_DIR/conf/proxy.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/proxy.conf"
   # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
   sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" "$NGINX_DIR/conf/proxy.conf"
 fi
 
 # 如果 cloudflare_ip.sh 代理优化配置文件
 if [ ! -f "/root/cloudflare_ip.sh" ]; then
-  wget -q -O "/root/cloudflare_ip.sh" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/cloudflare_ip.sh"
+  wget -q -O --tries=5 --waitretry=2 "/root/cloudflare_ip.sh" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/cloudflare_ip.sh"
   # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
   sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" "/root/cloudflare_ip.sh"
     # 给 cloudflare_ip.sh 文件添加执行权限
@@ -781,34 +781,34 @@ fi
 
 # 设置 nginx 用户
 \mv -f "$NGINX_DIR/conf/nginx.conf" "$NGINX_DIR/conf/nginx.conf.bak"
-wget -q -O $NGINX_DIR/conf/nginx.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.conf"
+wget -q -O --tries=5 --waitretry=2 $NGINX_DIR/conf/nginx.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.conf"
 # 替换文件中的 $NGINX_DIR 为实际的路径
 sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" $NGINX_DIR/conf/nginx.conf
 
 # php 配置文件 -- START
 # 下载 pathinfo.conf 为后期开启 PHP 作准备
 if [ ! -f "$NGINX_DIR/conf/pathinfo.conf" ]; then
-  wget -q -O "$NGINX_DIR/conf/pathinfo.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/php/pathinfo.conf"
+  wget -q -O --tries=5 --waitretry=2 "$NGINX_DIR/conf/pathinfo.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/php/pathinfo.conf"
   chmod 600 $NGINX_DIR/conf/pathinfo.conf
 fi
 
 # 下载 enable-php-84.conf 为后期开启 PHP 作准备 
 if [ ! -f "$NGINX_DIR/conf/enable-php-84.conf" ]; then
-  wget -q -O "$NGINX_DIR/conf/enable-php-84.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/php/enable-php-84.conf"
+  wget -q -O --tries=5 --waitretry=2 "$NGINX_DIR/conf/enable-php-84.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/php/enable-php-84.conf"
   chmod 600 $NGINX_DIR/conf/enable-php-84.conf
 fi
 # php 配置文件 -- END
 
 # 日志配置
 if [ ! -f "/etc/logrotate.d/nginx" ]; then
-  wget -q -O "/etc/logrotate.d/nginx" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx"
+  wget -q -O --tries=5 --waitretry=2 "/etc/logrotate.d/nginx" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx"
   # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
   sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" "/etc/logrotate.d/nginx"
 fi
 
 # 添加网站添加脚本
 if [ ! -f "/root/site.sh" ]; then
-  wget -q -O "/root/site.sh" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/site.sh"
+  wget -q -O --tries=5 --waitretry=2 "/root/site.sh" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/site.sh"
   # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
   sed -i "s|/opt|$OPT_DIR|g" "/root/site.sh"
   chmod 600 /root/site.sh
@@ -908,7 +908,7 @@ fi
 echo "获取最新的稳定版 Nginx 版本..."
 
 # 这个是获取最新稳定版
-#NGINX_VERSION=$(wget -qO- https://nginx.org/en/download.html | grep -oP 'Stable version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | grep -oP '\d+\.\d+\.\d+')
+#NGINX_VERSION=$(wget -qO- --tries=5 --waitretry=2 https://nginx.org/en/download.html | grep -oP 'Stable version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | grep -oP '\d+\.\d+\.\d+')
 
 # 获取 Nginx 主线版本
 #NGINX_VERSION=$(curl -s --retry 5 --retry-delay 2 https://nginx.org/en/download.html | grep -oP 'Mainline version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | sed -E 's/.*nginx-([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
@@ -920,7 +920,7 @@ fi
 # 下载 Nginx 源码包
 echo "下载 Nginx 源代码..."
 cd $NGINX_DIR || exit 1
-wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz || { echo "nginx下载失败"; exit 1; }
+wget --tries=5 --waitretry=2 https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz || { echo "nginx下载失败"; exit 1; }
 
 # 解压源码
 tar -zxvf nginx-${NGINX_VERSION}.tar.gz
