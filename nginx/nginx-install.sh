@@ -254,7 +254,7 @@ echo "Downloading modsecurity.conf..."
 if [ -f $NGINX_SRC_DIR/ModSecurity/modsecurity.conf ]; then
   mv -f $NGINX_SRC_DIR/ModSecurity/modsecurity.conf $NGINX_SRC_DIR/ModSecurity/modsecurity.conf.bak  # 备份旧文件
 fi
-wget -q -O --tries=5 --waitretry=2 --no-check-certificate $NGINX_SRC_DIR/ModSecurity/modsecurity.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/ModSecurity/modsecurity.conf"
+wget -q --tries=5 --waitretry=2 --no-check-certificate -O $NGINX_SRC_DIR/ModSecurity/modsecurity.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/ModSecurity/modsecurity.conf"
 
 # 规范文件权限
 chown root:root $NGINX_SRC_DIR/ModSecurity/modsecurity.conf
@@ -293,7 +293,7 @@ owasp_VERSION_NO_V="${owasp_VERSION//v}"
 owasp_DOWNLOAD_URL="https://github.com/coreruleset/coreruleset/archive/refs/tags/$owasp_VERSION.tar.gz"
 
 echo "正在下载最新版本：$owasp_VERSION"
-if curl -L -o --retry 5 --retry-delay 2 "coreruleset-$owasp_VERSION.tar.gz" "$owasp_DOWNLOAD_URL"; then
+if curl -L --retry 5 --retry-delay 2 -o "coreruleset-$owasp_VERSION.tar.gz" "$owasp_DOWNLOAD_URL"; then
     echo "下载完成：coreruleset-$owasp_VERSION.tar.gz"
 
     # 解压并检查
@@ -318,7 +318,7 @@ if curl -L -o --retry 5 --retry-delay 2 "coreruleset-$owasp_VERSION.tar.gz" "$ow
     if [ -f "/tmp/crs-setup.conf" ]; then
         cp -f "/tmp/crs-setup.conf" "$OPT_DIR/owasp/owasp-rules/crs-setup.conf"
     else
-        wget -q -O --tries=5 --waitretry=2 --no-check-certificate "$OPT_DIR/owasp/owasp-rules/crs-setup.conf" \
+        wget -q --tries=5 --waitretry=2 --no-check-certificate -O "$OPT_DIR/owasp/owasp-rules/crs-setup.conf" \
         "https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity/crs-setup.conf"
     fi
 
@@ -342,19 +342,19 @@ mkdir -p "$OPT_DIR/owasp/owasp-rules/plugins"
 
 # 添加 WordPress 常用的 Nginx 拒绝规则配置文件
 if [ ! -f $OPT_DIR/owasp/conf/nginx-wordpress.conf ]; then
-   wget -c -T 20 -O --tries=5 --waitretry=2 --no-check-certificate $OPT_DIR/owasp/conf/nginx-wordpress.conf \
+   wget -c -T 20 --tries=5 --waitretry=2 --no-check-certificate -O $OPT_DIR/owasp/conf/nginx-wordpress.conf \
    https://gist.githubusercontent.com/nfsarmento/57db5abba08b315b67f174cd178bea88/raw/b0768871c3349fdaf549a24268cb01b2be145a6a/nginx-wordpress.conf
 fi
 
 echo "Downloading WordPress 规则排除插件"
 # 下载 wordpress-rule-exclusions-before.conf 和 wordpress-rule-exclusions-config.conf 文件
 if [ ! -f $OPT_DIR/owasp/owasp-rules/plugins/wordpress-rule-exclusions-before.conf ]; then
-  wget -q -O --tries=5 --waitretry=2 --no-check-certificate $OPT_DIR/owasp/owasp-rules/plugins/wordpress-rule-exclusions-before.conf \
+  wget -q --tries=5 --waitretry=2 --no-check-certificate -O $OPT_DIR/owasp/owasp-rules/plugins/wordpress-rule-exclusions-before.conf \
   https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/master/plugins/wordpress-rule-exclusions-before.conf
 fi
 
 if [ ! -f $OPT_DIR/owasp/owasp-rules/plugins/wordpress-rule-exclusions-config.conf ]; then
-  wget -q -O --tries=5 --waitretry=2 --no-check-certificate $OPT_DIR/owasp/owasp-rules/plugins/wordpress-rule-exclusions-config.conf \
+  wget -q --tries=5 --waitretry=2 --no-check-certificate -O $OPT_DIR/owasp/owasp-rules/plugins/wordpress-rule-exclusions-config.conf \
   https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/master/plugins/wordpress-rule-exclusions-config.conf
 fi
 
@@ -373,7 +373,7 @@ echo "Downloading hosts.deny..."
 if [ -f $OPT_DIR/owasp/conf/hosts.deny ]; then
   mv -f $OPT_DIR/owasp/conf/hosts.deny $OPT_DIR/owasp/conf/hosts.deny.bak
 fi
-wget -q -O --tries=5 --waitretry=2 --no-check-certificate $OPT_DIR/owasp/conf/hosts.deny \
+wget -q --tries=5 --waitretry=2 --no-check-certificate -O $OPT_DIR/owasp/conf/hosts.deny \
 https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity/hosts.deny
 
 # 下载 hosts.allow 文件并备份旧文件（如果存在）
@@ -381,7 +381,7 @@ echo "Downloading hosts.allow..."
 if [ -f $OPT_DIR/owasp/conf/hosts.allow ]; then
   mv -f $OPT_DIR/owasp/conf/hosts.allow $OPT_DIR/owasp/conf/hosts.allow.bak
 fi
-wget -q -O --tries=5 --waitretry=2 --no-check-certificate $OPT_DIR/owasp/conf/hosts.allow \
+wget -q --tries=5 --waitretry=2 --no-check-certificate -O $OPT_DIR/owasp/conf/hosts.allow \
 https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity/hosts.allow
 
 # 下载 main.conf 文件并备份旧文件（如果存在）
@@ -389,7 +389,7 @@ echo "Downloading main.conf..."
 if [ -f $OPT_DIR/owasp/conf/main.conf ]; then
   mv -f $OPT_DIR/owasp/conf/main.conf $OPT_DIR/owasp/conf/main.conf.bak
 fi
-wget -q -O --tries=5 --waitretry=2 --no-check-certificate $OPT_DIR/owasp/conf/main.conf \
+wget -q --tries=5 --waitretry=2 --no-check-certificate -O $OPT_DIR/owasp/conf/main.conf \
 https://raw.githubusercontent.com/mzwrt/system_script/main/nginx/ModSecurity/main.conf
 
 
@@ -739,7 +739,7 @@ fi
 # 创建默认页目录及文件
 if [ ! -d "/www/wwwroot/html" ]; then
     mkdir -p /www/wwwroot/html
-    wget -q -O --tries=5 --waitretry=2 --no-check-certificate /www/wwwroot/html/index.html "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/index.html"
+    wget -q --tries=5 --waitretry=2 --no-check-certificate -O /www/wwwroot/html/index.html "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/index.html"
 fi
 # 设置属主
 chown -R www-data:www-data /www/wwwroot/html
@@ -749,7 +749,7 @@ chmod 755 /www/wwwroot/html
 find /www/wwwroot/html -type f -exec chmod 444 {} \;
 
 # 配置系统服务
-wget -q -O --tries=5 --waitretry=2 --no-check-certificate /etc/systemd/system/nginx.service "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.service"
+wget -q --tries=5 --waitretry=2 --no-check-certificate -O /etc/systemd/system/nginx.service "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.service"
 # 替换文件中的 $NGINX_DIR 为实际的路径
 sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" /etc/systemd/system/nginx.service
 
@@ -759,14 +759,14 @@ chmod u-x,go-wx "$NGINX_DIR/logs/nginx.pid"
 
 # 如果 proxy.conf 代理优化配置文件
 if [ ! -f "$NGINX_DIR/conf/proxy.conf" ]; then
-  wget -q -O --tries=5 --waitretry=2 --no-check-certificate "$NGINX_DIR/conf/proxy.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/proxy.conf"
+  wget -q --tries=5 --waitretry=2 --no-check-certificate -O "$NGINX_DIR/conf/proxy.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/proxy.conf"
   # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
   sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" "$NGINX_DIR/conf/proxy.conf"
 fi
 
 # 如果 cloudflare_ip.sh 代理优化配置文件
 if [ ! -f "/root/cloudflare_ip.sh" ]; then
-  wget -q -O --tries=5 --waitretry=2 --no-check-certificate "/root/cloudflare_ip.sh" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/cloudflare_ip.sh"
+  wget -q --tries=5 --waitretry=2 --no-check-certificate -O "/root/cloudflare_ip.sh" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/cloudflare_ip.sh"
   # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
   sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" "/root/cloudflare_ip.sh"
     # 给 cloudflare_ip.sh 文件添加执行权限
@@ -781,34 +781,34 @@ fi
 
 # 设置 nginx 用户
 \mv -f "$NGINX_DIR/conf/nginx.conf" "$NGINX_DIR/conf/nginx.conf.bak"
-wget -q -O --tries=5 --waitretry=2 --no-check-certificate $NGINX_DIR/conf/nginx.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.conf"
+wget -q --tries=5 --waitretry=2 --no-check-certificate -O $NGINX_DIR/conf/nginx.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.conf"
 # 替换文件中的 $NGINX_DIR 为实际的路径
 sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" $NGINX_DIR/conf/nginx.conf
 
 # php 配置文件 -- START
 # 下载 pathinfo.conf 为后期开启 PHP 作准备
 if [ ! -f "$NGINX_DIR/conf/pathinfo.conf" ]; then
-  wget -q -O --tries=5 --waitretry=2 --no-check-certificate "$NGINX_DIR/conf/pathinfo.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/php/pathinfo.conf"
+  wget -q --tries=5 --waitretry=2 --no-check-certificate -O "$NGINX_DIR/conf/pathinfo.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/php/pathinfo.conf"
   chmod 600 $NGINX_DIR/conf/pathinfo.conf
 fi
 
 # 下载 enable-php-84.conf 为后期开启 PHP 作准备 
 if [ ! -f "$NGINX_DIR/conf/enable-php-84.conf" ]; then
-  wget -q -O --tries=5 --waitretry=2 --no-check-certificate "$NGINX_DIR/conf/enable-php-84.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/php/enable-php-84.conf"
+  wget -q --tries=5 --waitretry=2 --no-check-certificate -O "$NGINX_DIR/conf/enable-php-84.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/php/enable-php-84.conf"
   chmod 600 $NGINX_DIR/conf/enable-php-84.conf
 fi
 # php 配置文件 -- END
 
 # 日志配置
 if [ ! -f "/etc/logrotate.d/nginx" ]; then
-  wget -q -O --tries=5 --waitretry=2 --no-check-certificate "/etc/logrotate.d/nginx" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx"
+  wget -q --tries=5 --waitretry=2 --no-check-certificate -O "/etc/logrotate.d/nginx" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx"
   # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
   sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" "/etc/logrotate.d/nginx"
 fi
 
 # 添加网站添加脚本
 if [ ! -f "/root/site.sh" ]; then
-  wget -q -O --tries=5 --waitretry=2 --no-check-certificate "/root/site.sh" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/site.sh"
+  wget -q --tries=5 --waitretry=2 --no-check-certificate -O "/root/site.sh" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/site.sh"
   # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
   sed -i "s|/opt|$OPT_DIR|g" "/root/site.sh"
   chmod 600 /root/site.sh
