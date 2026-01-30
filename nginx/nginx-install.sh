@@ -71,7 +71,7 @@ NGINX_VERSION=$(wget -qO- --tries=5 --waitretry=2 --no-check-certificate https:/
 #NGINX_VERSION=$(curl -s --retry 5 --retry-delay 2 --no-check-certificate  --retry-connrefused -L https://nginx.org/en/download.html | grep -oP 'Mainline version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | sed -E 's/.*nginx-([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
 
 
-# 创建 /opt/nginx/src 目录
+# 创建 $NGINX_DIR/src 目录
 if [ ! -d "$NGINX_SRC_DIR" ]; then
     mkdir -p "$NGINX_SRC_DIR"
     chmod 750 "$NGINX_SRC_DIR"
@@ -709,13 +709,13 @@ fi
 
 # 根据 CIS nginx 2.4.2
 # 创建默认证书
-if [ ! -f /opt/nginx/ssl/default/default.key ] || [ ! -f /opt/nginx/ssl/default/default.pem ]; then
+if [ ! -f $NGINX_DIR/ssl/default/default.key ] || [ ! -f $NGINX_DIR/ssl/default/default.pem ]; then
     openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
-      -keyout /opt/nginx/ssl/default/default.key \
-      -out /opt/nginx/ssl/default/default.pem \
+      -keyout $NGINX_DIR/ssl/default/default.key \
+      -out $NGINX_DIR/ssl/default/default.pem \
       -subj "/C=XX/ST=Default/L=Default/O=Default/CN=localhost"
-    chmod 400 /opt/nginx/ssl/default/default.key 
-    chmod 600 /opt/nginx/ssl/default/default.pem
+    chmod 400 $NGINX_DIR/ssl/default/default.key 
+    chmod 600 $NGINX_DIR/ssl/default/default.pem
 fi
 
 # 创建网站配置文件文件夹
@@ -810,7 +810,7 @@ fi
 if [ ! -f "/root/site.sh" ]; then
   wget -q --tries=5 --waitretry=2 --no-check-certificate -O "/root/site.sh" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/site.sh"
   # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
-  sed -i "s|/opt|$OPT_DIR|g" "/root/site.sh"
+  sed -i "s|$OPT_DIR|$OPT_DIR|g" "/root/site.sh"
   chmod 600 /root/site.sh
 fi
 
@@ -886,10 +886,10 @@ upgrade_nginx() {
 
 
 shopt -s dotglob nullglob
-for item in /opt/nginx/* /opt/nginx/.[!.]* /opt/nginx/..?*; do
+for item in $NGINX_DIR/* $NGINX_DIR/.[!.]* $NGINX_DIR/..?*; do
   case "$item" in
-    "/opt/nginx/logs" | "/opt/nginx") ;;
-    *) mv "$item" /opt/nginx-bak/ ;;
+    "$NGINX_DIR/logs" | "$NGINX_DIR") ;;
+    *) mv "$item" $OPT_DIR/nginx-bak/ ;;
   esac
 done
 shopt -u dotglob nullglob
@@ -897,7 +897,7 @@ shopt -u dotglob nullglob
 # 备份运行文件
 [ -f /usr/local/bin/nginx ] && cp -af /usr/local/bin/nginx /usr/local/bin/nginx.bak
 
-# 重新创建 /opt/nginx/src 目录
+# 重新创建 $NGINX_DIR/src 目录
 if [ ! -d "$NGINX_SRC_DIR" ]; then
     mkdir -p "$NGINX_SRC_DIR"
     chmod 750 "$NGINX_SRC_DIR"
