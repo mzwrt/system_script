@@ -214,7 +214,7 @@ pcre2_install() {
     fi
 
     echo "正在下载并安装 PCRE2：$pcre2_version"
-    curl -LO --tlsv1.2 --retry 5 --retry-delay 2 "https://github.com/PhilipHazel/pcre2/releases/download/$pcre2_version/$pcre2_version.tar.gz"
+    wget --tries=5 --waitretry=2 --no-check-certificate "https://github.com/PhilipHazel/pcre2/releases/download/$pcre2_version/$pcre2_version.tar.gz"
 
     if [ ! -f "$pcre2_version.tar.gz" ]; then
         echo "下载 pcre2 失败，请检查链接或网络。"
