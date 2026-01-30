@@ -420,7 +420,6 @@ apt-get update
 apt-get install -y \
     apt-utils \
     build-essential \
-    libpcre3-dev \
     libssl-dev \
     zlib1g-dev \
     libaio-dev \
