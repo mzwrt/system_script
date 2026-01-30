@@ -68,7 +68,7 @@ OPENSSL_VERSION=3.5.4
 # 这个是获取最新稳定版
 NGINX_VERSION=$(wget -qO- --tries=5 --waitretry=2 --no-check-certificate https://nginx.org/en/download.html | grep -oP 'Stable version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | grep -oP '\d+\.\d+\.\d+')
 # 获取 Nginx 主线版本
-#NGINX_VERSION=$(curl -s --retry 5 --retry-delay 2 --no-check-certificate https://nginx.org/en/download.html | grep -oP 'Mainline version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | sed -E 's/.*nginx-([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+#NGINX_VERSION=$(curl -s --retry 5 --retry-delay 2 --no-check-certificate  --retry-connrefused -L https://nginx.org/en/download.html | grep -oP 'Mainline version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | sed -E 's/.*nginx-([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
 
 
 # 创建 /opt/nginx/src 目录
@@ -116,7 +116,7 @@ ngx_http_proxy_connect_module_install() {
 # 获取最新 tag（版本号）
 cd $NGINX_SRC_DIR || exit 1
 
-ngx_http_proxy_connect_module_version=$(curl -s --retry 5 --retry-delay 2 https://api.github.com/repos/chobits/ngx_http_proxy_connect_module/tags | grep -o '"name": "[^"]*' | head -n 1 | cut -d '"' -f 4)
+ngx_http_proxy_connect_module_version=$(curl -s --retry 5 --retry-delay 2  --retry-connrefused -L https://api.github.com/repos/chobits/ngx_http_proxy_connect_module/tags | grep -o '"name": "[^"]*' | head -n 1 | cut -d '"' -f 4)
 
 if [ -z "$ngx_http_proxy_connect_module_version" ]; then
   echo "错误：未能获取 ngx_http_proxy_connect_module 的最新版本"
@@ -164,7 +164,7 @@ ngx_http_headers_more_filter_module_install() {
 
   # 获取最新 tag（版本号），例如 v0.38
   #ngx_http_headers_more_filter_module_version="v0.38" # 制定版本使用
-  ngx_http_headers_more_filter_module_version=$(curl -s --retry 5 --retry-delay 2 https://api.github.com/repos/openresty/headers-more-nginx-module/tags | grep -o '"name": "[^"]*' | head -n 1 | cut -d '"' -f 4 | sed 's/^v//') # 默认自动获取最新版
+  ngx_http_headers_more_filter_module_version=$(curl -s --retry 5 --retry-delay 2  --retry-connrefused -L https://api.github.com/repos/openresty/headers-more-nginx-module/tags | grep -o '"name": "[^"]*' | head -n 1 | cut -d '"' -f 4 | sed 's/^v//') # 默认自动获取最新版
 
   # 下载并解压 .tar.gz
   wget --tries=5 --waitretry=2 --no-check-certificate "https://github.com/openresty/headers-more-nginx-module/archive/refs/tags/v${ngx_http_headers_more_filter_module_version}.tar.gz"
@@ -177,7 +177,7 @@ ngx_http_headers_more_filter_module_install() {
 ngx_cache_purge_install() {
     # 获取最新版本标签
     #ngx_cache_purge_version="2.3" # 制定版本使用
-    ngx_cache_purge_version=$(curl -s --retry 5 --retry-delay 2 https://api.github.com/repos/FRiCKLE/ngx_cache_purge/tags | grep -o '"name": "[^"]*' | head -n 1 | cut -d '"' -f 4) # 默认自动获取最新版
+    ngx_cache_purge_version=$(curl -s --retry 5 --retry-delay 2  --retry-connrefused -L https://api.github.com/repos/FRiCKLE/ngx_cache_purge/tags | grep -o '"name": "[^"]*' | head -n 1 | cut -d '"' -f 4) # 默认自动获取最新版
 
     cd "$NGINX_SRC_DIR" || { echo "无法切换到 ngx_cache_purge 目录 $NGINX_SRC_DIR"; exit 1; }
 
@@ -199,7 +199,7 @@ ngx_cache_purge_install() {
 pcre2_install() {
     echo "正在获取 PCRE2 最新版本..."
     #pcre2_version="pcre2-10.45" # 制定版本使用
-    pcre2_version=$(curl -sSL --retry 5 --retry-delay 2 https://api.github.com/repos/PhilipHazel/pcre2/releases/latest | grep -oP '"tag_name":\s*"\K[^"]+') # 默认自动获取最新版
+    pcre2_version=$(curl -sSL --retry 5 --retry-delay 2  --retry-connrefused -L https://api.github.com/repos/PhilipHazel/pcre2/releases/latest | grep -oP '"tag_name":\s*"\K[^"]+') # 默认自动获取最新版
 
     if [ -z "$pcre2_version" ]; then
         echo "获取 PCRE2 版本失败，请检查网络连接或 GitHub API。"
@@ -283,7 +283,7 @@ cd $OPT_DIR/owasp  || exit 1
 
 # 获取最新版本号
 # 获取版本号
-owasp_VERSION=$(curl -s --retry 5 --retry-delay 2 "https://api.github.com/repos/coreruleset/coreruleset/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")')
+owasp_VERSION=$(curl -s --retry 5 --retry-delay 2  --retry-connrefused -L "https://api.github.com/repos/coreruleset/coreruleset/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")')
 if [ -z "$owasp_VERSION" ]; then
     echo "无法获取最新版本号。请检查网络连接或稍后重试。"
     exit 1
@@ -293,7 +293,7 @@ owasp_VERSION_NO_V="${owasp_VERSION//v}"
 owasp_DOWNLOAD_URL="https://github.com/coreruleset/coreruleset/archive/refs/tags/$owasp_VERSION.tar.gz"
 
 echo "正在下载最新版本：$owasp_VERSION"
-if curl -L --retry 5 --retry-delay 2 -o "coreruleset-$owasp_VERSION.tar.gz" "$owasp_DOWNLOAD_URL"; then
+if curl -L --retry 5 --retry-delay 2  --retry-connrefused -L -o "coreruleset-$owasp_VERSION.tar.gz" "$owasp_DOWNLOAD_URL"; then
     echo "下载完成：coreruleset-$owasp_VERSION.tar.gz"
 
     # 解压并检查
@@ -456,7 +456,7 @@ apt-get install -y \
 #NGINX_VERSION=$(wget -qO- --tries=5 --waitretry=2 --no-check-certificate https://nginx.org/en/download.html | grep -oP 'Stable version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | grep -oP '\d+\.\d+\.\d+')
 
 # 获取 Nginx 主线版本
-#NGINX_VERSION=$(curl -s --retry 5 --retry-delay 2 https://nginx.org/en/download.html | grep -oP 'Mainline version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | sed -E 's/.*nginx-([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+#NGINX_VERSION=$(curl -s --retry 5 --retry-delay 2  --retry-connrefused -L https://nginx.org/en/download.html | grep -oP 'Mainline version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | sed -E 's/.*nginx-([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
 if [ -z "$NGINX_VERSION" ]; then
     echo "未能获取 Nginx 主线版本，请检查下载页面结构"
     exit 1
@@ -911,7 +911,7 @@ echo "获取最新的稳定版 Nginx 版本..."
 #NGINX_VERSION=$(wget -qO- --tries=5 --waitretry=2 --no-check-certificate https://nginx.org/en/download.html | grep -oP 'Stable version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | grep -oP '\d+\.\d+\.\d+')
 
 # 获取 Nginx 主线版本
-#NGINX_VERSION=$(curl -s --retry 5 --retry-delay 2 --no-check-certificate https://nginx.org/en/download.html | grep -oP 'Mainline version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | sed -E 's/.*nginx-([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+#NGINX_VERSION=$(curl -s --retry 5 --retry-delay 2  --retry-connrefused -L --no-check-certificate https://nginx.org/en/download.html | grep -oP 'Mainline version.*?nginx-\d+\.\d+\.\d+' | head -n 1 | sed -E 's/.*nginx-([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
 if [ -z "$NGINX_VERSION" ]; then
     echo "未能获取 Nginx 主线版本，请检查下载页面结构"
     exit 1
