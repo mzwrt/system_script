@@ -269,7 +269,7 @@ modsecurity_nginx_install() {
 cd $NGINX_SRC_DIR || exit 1
 
 # 下载 ModSecurity-nginx 模块
-git clone --depth 1 https://github.com/SpiderLabs/ModSecurity-nginx.git
+git clone --depth 1 https://github.com/owasp-modsecurity/ModSecurity-nginx.git
 chown -R root:root $NGINX_SRC_DIR/ModSecurity-nginx
 }
 
