@@ -765,7 +765,10 @@ if [ ! -f "$NGINX_DIR/conf/proxy.conf" ]; then
 fi
 
 # 如果 cloudflare_ip.sh 代理优化配置文件
-if [ ! -f "/root/cloudflare_ip.sh" ]; then
+# 判断 cloudflare_ip.sh 文件是否存在，若存在则删除
+if [ -f "/root/cloudflare_ip.sh" ]; then
+  rm -f "/root/cloudflare_ip.sh"
+fi
   wget -q --tries=5 --waitretry=2 --no-check-certificate -O "/root/cloudflare_ip.sh" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/cloudflare_ip.sh"
   # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
   sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" "/root/cloudflare_ip.sh"
@@ -777,7 +780,7 @@ if [ ! -f "/root/cloudflare_ip.sh" ]; then
   bash /root/cloudflare_ip.sh
   # 添加每月1号执行的定时任务
   echo "0 0 1 * * /root/cloudflare_ip.sh && (crontab -l | grep -v '/root/cloudflare_ip.sh' | crontab -)" | crontab -
-fi
+
 
 # 设置 nginx 用户
 \mv -f "$NGINX_DIR/conf/nginx.conf" "$NGINX_DIR/conf/nginx.conf.bak"
