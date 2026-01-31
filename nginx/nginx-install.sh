@@ -827,7 +827,7 @@ fi
 if [ ! -f "/root/site.sh" ]; then
   wget -q --tries=5 --waitretry=2 --no-check-certificate -O "/root/site.sh" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/site.sh"
   # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
-  sed -i "s|$OPT_DIR|$OPT_DIR|g" "/root/site.sh"
+  sed -i "s|/opt|$OPT_DIR|g" "/root/site.sh"
   chmod 600 /root/site.sh
 fi
 
