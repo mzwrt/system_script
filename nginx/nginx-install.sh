@@ -739,7 +739,7 @@ fi
 # 创建默认页目录及文件
 if [ ! -d "/www/wwwroot/html" ]; then
     mkdir -p /www/wwwroot/html
-    wget -q --tries=5 --waitretry=2 --no-check-certificate -O /www/wwwroot/html/index.html "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/index.html"
+    wget -q --tries=5 --waitretry=2 --no-check-certificate -O "/www/wwwroot/html/index.html" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/index.html"
 fi
 # 设置属主
 chown -R www-data:www-data /www/wwwroot/html
@@ -751,7 +751,7 @@ find /www/wwwroot/html -type f -exec chmod 444 {} \;
 # 配置系统服务
 wget -q --tries=5 --waitretry=2 --no-check-certificate -O /etc/systemd/system/nginx.service "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.service"
 # 替换文件中的 $NGINX_DIR 为实际的路径
-sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" /etc/systemd/system/nginx.service
+sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" "/etc/systemd/system/nginx.service"
 
 # 创建 pid 文件
 touch "$NGINX_DIR/logs/nginx.pid"
@@ -789,15 +789,18 @@ fi
   echo "real_ip_header CF-Connecting-IP;" >> $NGINX_DIR/conf.d/sites-available/cloudflare_ip.conf;
   echo "#real_ip_header X-Forwarded-For;" >> $NGINX_DIR/conf.d/sites-available/cloudflare_ip.conf;
   chmod 600 $NGINX_DIR/conf.d/sites-available/cloudflare_ip.conf
+  if [ -f "$NGINX_DIR/conf.d/sites-available/cloudflare_ip.conf" ]; then
+    ln -s "$NGINX_DIR/conf.d/sites-available/cloudflare_ip.conf" "$NGINX_DIR/conf.d/sites-enabled/cloudflare_ip.conf"
+  fi
   # 添加每月1号执行的定时任务
   echo "0 0 1 * * /root/cloudflare_ip.sh && (crontab -l | grep -v '/root/cloudflare_ip.sh' | crontab -)" | crontab -
 
 
 # 设置 nginx 用户
 \mv -f "$NGINX_DIR/conf/nginx.conf" "$NGINX_DIR/conf/nginx.conf.bak"
-wget -q --tries=5 --waitretry=2 --no-check-certificate -O $NGINX_DIR/conf/nginx.conf "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.conf"
+wget -q --tries=5 --waitretry=2 --no-check-certificate -O "$NGINX_DIR/conf/nginx.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.conf"
 # 替换文件中的 $NGINX_DIR 为实际的路径
-sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" $NGINX_DIR/conf/nginx.conf
+sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" "$NGINX_DIR/conf/nginx.conf"
 
 # php 配置文件 -- START
 # 下载 pathinfo.conf 为后期开启 PHP 作准备
