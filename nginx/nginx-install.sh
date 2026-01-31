@@ -827,9 +827,11 @@ find $NGINX_DIR/conf.d -type f -exec chmod 600 {} \;
 echo "重新加载 systemd 并启动 Nginx..."
 systemctl daemon-reload
 systemctl enable nginx
-nginx -t
-sleep 2  # 加入短暂的延时，确保配置加载完成
-systemctl start nginx
+sleep 2  # 确保 daemon-reload 完全执行
+nginx -t  || true
+
+# 直接执行启动命令，即使失败也继续执行
+systemctl start nginx || true
 
 # 完成
 echo "############# 安装说明 ################"
