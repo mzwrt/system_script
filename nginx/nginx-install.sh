@@ -19,11 +19,11 @@ NGINX_SRC_DIR="$OPT_DIR/nginx/src"   # 源代码和模块的存放目录
 
 # ngx-fancyindex 模块
 # 设置为 false 即不启用
-USE_ngx_fancyindex=false  
+USE_ngx_fancyindex=false
 
 # PCRE2 模块
 # 设置为 false 即不启用
-USE_PCRE2=true  
+USE_PCRE2=true
 
 # ngx_cache_purge 模块
 # 设置为 false 即不启用
