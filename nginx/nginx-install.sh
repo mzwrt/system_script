@@ -246,7 +246,7 @@ git submodule update
 # 所以添加 JEMALLOC_CFLAGS="" JEMALLOC_LIBS="" 和 --disable-shared 
 # 让 ModSecurity 变为静态模块
 ./build.sh
-./configure
+./configure --with-pcre2
 make -j$(nproc) || make
 make install
 # 下载 modsecurity.conf 文件并备份旧文件（如果存在）
