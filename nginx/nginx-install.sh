@@ -1222,10 +1222,10 @@ uninstall_nginx() {
     #删除 cloudflare_ip.sh 定时任务
     (crontab -l | grep -v '/root/cloudflare_ip.sh') | crontab -
     # 删除脚本
-    [ -d "/root/cloudflare_ip.sh" ] && rm -rf "/root/cloudflare_ip.sh"
+    [ -f "/root/cloudflare_ip.sh" ] && rm -f "/root/cloudflare_ip.sh"
 
     echo "删除 Nginx 二进制文件..."
-    [ -f "/usr/local/bin/nginx" ] && rm -f /usr/local/bin/nginx
+    [ -f "/usr/local/bin/nginx" ] && rm -f "/usr/local/bin/nginx"
 
     # 删除 owasp 规则 保留 crs-setup.conf 配置文件
     [ -d "$OPT_DIR/owasp/owasp-rules" ] && find "$OPT_DIR/owasp/owasp-rules/" ! -name 'crs-setup.conf' ! -path "$OPT_DIR/owasp/owasp-rules/" -exec rm -rf {} +
