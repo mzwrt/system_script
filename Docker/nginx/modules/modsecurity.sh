@@ -7,7 +7,7 @@ git clone --depth 1 -b v3/master --single-branch https://github.com/SpiderLabs/M
 cd ModSecurity
 git submodule update --recursive
 git submodule init
-git submodule update
+git submodule update --recursive
 # 配置 ModSecurity（禁用 jemalloc）
 # jemalloc 与 ModSecurity 不兼容
 # 所以添加 JEMALLOC_CFLAGS="" JEMALLOC_LIBS="" 和 --disable-shared 
@@ -30,5 +30,8 @@ if [ -f "$NGINX_SRC_DIR/ModSecurity/modsecurity.conf.bak" ]; then
   chmod 600 "$NGINX_SRC_DIR/ModSecurity/modsecurity.conf.bak"
 fi
 
-
+ModSecurity-nginx 连接器
+cd $NGINX_SRC_DIR
+git clone --depth 1 https://github.com/owasp-modsecurity/ModSecurity-nginx.git
+chown -R root:root "$NGINX_SRC_DIR/ModSecurity-nginx"
 
