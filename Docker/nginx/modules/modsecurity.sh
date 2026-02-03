@@ -1,4 +1,5 @@
 #!/bin/bash
+cd "$NGINX_SRC_DIR"
 # 如果存在，删除/usr/local/modsecurity目录重新安装
 if [ -d "/usr/local/modsecurity" ]; then
     rm -rf /usr/local/modsecurity
