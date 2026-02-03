@@ -1,11 +1,11 @@
 #!/bin/bash
 # 下载并解压模块
-wget --tries=5 --waitretry=2 --no-check-certificate "https://github.com/chobits/ngx_http_proxy_connect_module/archive/refs/tags/$ngx_http_proxy_connect_module_version.zip"
+wget --tries=5 --waitretry=2 --no-check-certificate "https://github.com/chobits/ngx_http_proxy_connect_module/archive/refs/tags/$USE_ngx_http_proxy_connect_module_version.zip"
 
-unzip $ngx_http_proxy_connect_module_version.zip
+unzip $USE_ngx_http_proxy_connect_module_version.zip
 
-rm -f $ngx_http_proxy_connect_module_version.zip
-mv ngx_http_proxy_connect_module-${ngx_http_proxy_connect_module_version#v} ngx_http_proxy_connect_module
+rm -f $USE_ngx_http_proxy_connect_module_version.zip
+mv ngx_http_proxy_connect_module-${USE_ngx_http_proxy_connect_module_version#v} ngx_http_proxy_connect_module
 
 # 应用补丁
 cd $NGINX_DIR
