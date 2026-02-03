@@ -93,6 +93,10 @@ CapabilityBoundingSet=~CAP_IPC_LOCK CAP_NET_ADMIN CAP_NET_RAW CAP_NET_BROADCAST 
 AmbientCapabilities=
 # 只允许服务访问 /proc 中与本服务相关的 PID 子集
 ProcSubset=pid
+# 防止大规模的内存分配漏洞利用
+LimitMEMLOCK=infinity
+# 防止恶意进程占用过多的资源或发生拒绝服务攻击
+ResourceLimit=true
 
 
 
