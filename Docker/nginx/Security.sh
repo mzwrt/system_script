@@ -72,15 +72,6 @@ chmod 755 /www/wwwroot/html
 # 所有文件只读
 find /www/wwwroot/html -type f -exec chmod 444 {} \;
 
-# 配置系统服务
-wget -q --tries=5 --waitretry=2 --no-check-certificate -O /etc/systemd/system/nginx.service "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx.service"
-# 替换文件中的 $NGINX_DIR 为实际的路径
-sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" "/etc/systemd/system/nginx.service"
-
-# 创建 pid 文件
-touch "$NGINX_DIR/logs/nginx.pid"
-chmod u-x,go-wx "$NGINX_DIR/logs/nginx.pid"
-
 # 如果 proxy.conf 代理优化配置文件
 if [ ! -f "$NGINX_DIR/conf/proxy.conf" ]; then
   wget -q --tries=5 --waitretry=2 --no-check-certificate -O "$NGINX_DIR/conf/proxy.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/proxy.conf"
@@ -88,18 +79,6 @@ if [ ! -f "$NGINX_DIR/conf/proxy.conf" ]; then
   sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" "$NGINX_DIR/conf/proxy.conf"
 fi
 
-# 如果 cloudflare_ip.sh 代理优化配置文件
-# 判断 cloudflare_ip.sh 文件是否存在，若存在则删除
-if [ -f "/root/cloudflare_ip.sh" ]; then
-  rm -f "/root/cloudflare_ip.sh"
-fi
-  wget -q --tries=5 --waitretry=2 --no-check-certificate -O "/root/cloudflare_ip.sh" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/cloudflare_ip.sh"
-  # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
-  sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" "/root/cloudflare_ip.sh"
-    # 给 cloudflare_ip.sh 文件添加执行权限
-  chmod +x "/root/cloudflare_ip.sh"
-  chmod 600 "/root/cloudflare_ip.sh"
-  chown root:root "/root/cloudflare_ip.sh"
   # 运行 添加获取真实IP文件
    echo "#Cloudflare" > $NGINX_DIR/conf.d/sites-available/cloudflare_ip.conf;
   for i in `curl https://www.cloudflare.com/ips-v4`; do
@@ -116,9 +95,6 @@ fi
   if [ -f "$NGINX_DIR/conf.d/sites-available/cloudflare_ip.conf" ]; then
     ln -s "$NGINX_DIR/conf.d/sites-available/cloudflare_ip.conf" "$NGINX_DIR/conf.d/sites-enabled/cloudflare_ip.conf"
   fi
-  # 添加每月1号执行的定时任务
-  echo "0 0 1 * * /root/cloudflare_ip.sh && (crontab -l | grep -v '/root/cloudflare_ip.sh' | crontab -)" | crontab -
-
 
 # 设置 nginx 用户
 \mv -f "$NGINX_DIR/conf/nginx.conf" "$NGINX_DIR/conf/nginx.conf.bak"
@@ -140,12 +116,6 @@ if [ ! -f "$NGINX_DIR/conf/enable-php-84.conf" ]; then
 fi
 # php 配置文件 -- END
 
-# 日志配置
-if [ ! -f "/etc/logrotate.d/nginx" ]; then
-  wget -q --tries=5 --waitretry=2 --no-check-certificate -O "/etc/logrotate.d/nginx" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx"
-  # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
-  sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" "/etc/logrotate.d/nginx"
-fi
 
 # 规范文件权限
 find $NGINX_DIR/conf -type d -exec chmod 700 {} \;
