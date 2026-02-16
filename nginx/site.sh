@@ -23,33 +23,30 @@ SITE_ACME_ENV="$HOME/.acme.sh/acme.sh.env"
 [ -f "$SITE_ACME_ENV" ] && . "$SITE_ACME_ENV"
 export PATH="$HOME/.acme.sh:$PATH"
 
-# 检查 acme.sh 是否已安装
 command -v acme.sh >/dev/null 2>&1 || {
-    echo "❌ 未检测到 acme.sh，请先安装或检查 PATH"
+    echo "❌ 未检测到 acme.sh，请先安装"
     read -p "是否要安装 acme.sh？ (y/n): " install_choice
-    if [[ "$install_choice" == "y" || "$install_choice" == "Y" ]]; then
-        # 提示用户输入邮箱并安装 acme.sh
+    if [[ "$install_choice" =~ ^[Yy]$ ]]; then
         read -p "请输入邮箱地址用于注册账户: " user_email
         echo "正在安装 acme.sh..."
         sudo apt update
-        sudo apt install socat
-        wget -O -  https://get.acme.sh | sh -s email="$user_email"
+        sudo apt install -y socat
+        wget -O - https://get.acme.sh | sh -s email="$user_email"
         echo "acme.sh 安装完成"
     else
-        echo "用户选择不安装，退出脚本。"
         exit 1
     fi
 }
 
 # ----------------------------
-# 域名校验
+# 严格域名验证
 # ----------------------------
-validate_SITE_domain() {
-    [[ "$1" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]
+validate_site_domain() {
+    [[ "$1" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$ ]]
 }
 
 # ----------------------------
-# DH 参数生成
+# DH 参数生成（一次性）
 # ----------------------------
 generate_dhparam() {
     if [ ! -f "$SITE_DHPARAM_FILE" ]; then
@@ -62,87 +59,91 @@ generate_dhparam() {
 }
 
 # ----------------------------
-# DNS 提供商选择（含退出）
+# DNS 提供商选择
 # ----------------------------
-SITE_provider=""
-select_dns_SITE_provider() {
+SITE_PROVIDER=""
+select_dns_site_provider() {
     while true; do
         echo
         echo "请选择 DNS 提供商："
         echo "1) 阿里云"
         echo "2) Cloudflare"
         echo "0) 退出"
-        read -r c </dev/tty
+        read -r c
         case "$c" in
-            1) SITE_provider="ali"; return ;;
-            2) SITE_provider="cf"; return ;;
-            0) echo "已退出"; exit 0 ;;
+            1) SITE_PROVIDER="ali"; return ;;
+            2) SITE_PROVIDER="cf"; return ;;
+            0) exit 0 ;;
             *) echo "❌ 无效选项，请输入 1、2 或 0";;
         esac
     done
 }
 
 # ----------------------------
-# DNS API 检测
+# DNS API 配置
 # ----------------------------
 setup_dns_api() {
-    case "$SITE_provider" in
+    case "$SITE_PROVIDER" in
         ali)
             if ! grep -q 'Ali_Key' "$SITE_ACME_ACCOUNT_CONF" 2>/dev/null; then
                 echo "首次使用阿里云 DNS，请输入 API 密钥"
-                read -r -p "请输入您的邮箱（例如 you@example.com）: " site_account_email  # 提示输入邮箱
+                read -r -p "请输入邮箱: " site_account_email
                 read -r -p "Ali_Key: " Ali_Key
                 read -r -p "Ali_Secret: " Ali_Secret
                 export Ali_Key Ali_Secret
-                acme.sh --register-account --accountemail "$site_account_email" --dns dns_ali
+                acme.sh --register-account --accountemail "$site_account_email"
+            else
+                echo "✅ 阿里云 DNS API 已配置"
             fi
             ;;
         cf)
             if ! grep -q 'CF_Token' "$SITE_ACME_ACCOUNT_CONF" 2>/dev/null; then
                 echo "首次使用 Cloudflare DNS，请输入 API 密钥"
-                read -r -p "请输入您的邮箱（例如 you@example.com）: " site_account_email  # 提示输入邮箱
+                read -r -p "请输入邮箱: " site_account_email
                 read -r -p "CF_Token: " CF_Token
                 read -r -p "CF_Account: " CF_Account
                 export CF_Token CF_Account
-                acme.sh --register-account --accountemail "$site_account_email" --dns dns_cf
+                acme.sh --register-account --accountemail "$site_account_email"
+            else
+                echo "✅ Cloudflare DNS API 已配置"
             fi
             ;;
     esac
 }
 
 # ----------------------------
-# 证书申请（每个域名单独）
+# 证书申请
 # ----------------------------
 issue_cert() {
-    local SITE_domain="$1"
+    local DOMAIN="$1"
+    local SSL_DIR="$SITE_SSL_BASE_DIR/$DOMAIN"
 
-    if acme.sh --list | grep -qw "$SITE_domain"; then
-        echo "✅ 已存在 $SITE_domain 证书，跳过申请"
+    if [ -f "$SSL_DIR/fullchain.pem" ]; then
+        echo "✅ $DOMAIN 证书已存在，跳过申请"
         return
     fi
 
-    echo "📄 开始申请 $SITE_domain 证书..."
-    if ! acme.sh --issue -d "$SITE_domain" --dns dns_"$SITE_provider" --keylength 2048; then
-        echo "❌ 证书申请失败：$SITE_domain"
-        acme.sh --remove -d "$SITE_domain" 2>/dev/null || true
+    echo "📄 正在申请 $DOMAIN 证书..."
+    if ! acme.sh --issue -d "$DOMAIN" --dns dns_"$SITE_PROVIDER" --keylength 2048; then
+        echo "❌ 证书申请失败：$DOMAIN"
+        acme.sh --remove -d "$DOMAIN" 2>/dev/null || true
         return 1
     fi
 
-    mkdir -p "$SITE_SSL_BASE_DIR/$SITE_domain"
-    chmod 700 "$SITE_SSL_BASE_DIR/$SITE_domain"
-    acme.sh --install-cert -d "$SITE_domain" \
-        --key-file "$SITE_SSL_BASE_DIR/$SITE_domain/privkey.pem" \
-        --fullchain-file "$SITE_SSL_BASE_DIR/$SITE_domain/fullchain.pem" \
-        --ca-file "$SITE_SSL_BASE_DIR/$SITE_domain/ca.pem" \
+    mkdir -p "$SSL_DIR"
+    chmod 700 "$SSL_DIR"
+    acme.sh --install-cert -d "$DOMAIN" \
+        --key-file "$SSL_DIR/privkey.pem" \
+        --fullchain-file "$SSL_DIR/fullchain.pem" \
+        --ca-file "$SSL_DIR/ca.pem" \
         --reloadcmd "systemctl reload nginx"
-    # 查找目录下的所有文件，并设置权限为 600
-    find "$SITE_SSL_BASE_DIR/$SITE_domain" -type f -exec chmod 600 {} \;
 
-    echo "✅ $SITE_domain 证书申请完成"
+    find "$SSL_DIR" -type f -exec chmod 600 {} \;
+    echo "✅ $DOMAIN 证书申请完成"
 }
 
 # ----------------------------
-# 检查 Nginx 配置并重载
+# Nginx 配置检查
 # ----------------------------
 nginx_reload() {
     if nginx -t >/dev/null 2>&1; then
@@ -158,94 +159,77 @@ nginx_reload() {
 # 创建网站
 # ----------------------------
 create_site() {
-    local SITE_SITE_domains="$1"
+    local DOMAINS="$1"
 
-    for SITE_domain in $SITE_SITE_domains; do
-        SITE_domain="${SITE_domain// /}"       # 去掉空格
-        validate_SITE_domain "$SITE_domain" || { echo "❌ 域名不合法：$SITE_domain"; continue; }
+    generate_dhparam
 
-        local SITE_web="/www/wwwroot/$SITE_domain"
-        local SITE_conf="$SITE_CONF_DIR/$SITE_domain.conf"
+    for DOMAIN in $DOMAINS; do
+        DOMAIN="${DOMAIN// /}"
+        validate_site_domain "$DOMAIN" || { echo "❌ 域名不合法：$DOMAIN"; continue; }
 
-        # 创建目录
-        # 检查并创建必要的目录
-        if [ ! -d "$SITE_web" ]; then
-            mkdir -p "$SITE_web"
-            chown -R "$SITE_NGINX_USER:$SITE_NGINX_GROUP" "$SITE_web"
-        fi
+        local WEB_ROOT="/www/wwwroot/$DOMAIN"
+        local CONF_FILE="$SITE_CONF_DIR/$DOMAIN.conf"
 
-        if [ ! -d "$SITE_CONF_DIR" ]; then
-            mkdir -p "$SITE_CONF_DIR"
-        fi
-
-        if [ ! -d "$SITE_ENABLED_DIR" ]; then
-            mkdir -p "$SITE_ENABLED_DIR"
-        fi
-
-        if [ ! -d "$SITE_SSL_BASE_DIR/$SITE_domain" ]; then
-            mkdir -p "$SITE_SSL_BASE_DIR/$SITE_domain"
-            chmod 700 "$SITE_SSL_BASE_DIR/$SITE_domain"
-        fi
+        mkdir -p "$WEB_ROOT"
+        chown -R "$SITE_NGINX_USER:$SITE_NGINX_GROUP" "$WEB_ROOT"
+        mkdir -p "$SITE_CONF_DIR" "$SITE_ENABLED_DIR" "$SITE_SSL_BASE_DIR/$DOMAIN"
+        chmod 700 "$SITE_SSL_BASE_DIR/$DOMAIN"
 
         # 下载模板
-        if [ ! -f "$SITE_conf" ]; then
-            curl -fsSL "$SITE_TEMPLATE_URL" -o "$SITE_conf"
-            chmod 600 "$SITE_conf"
-            ln -sf "$SITE_conf" "$SITE_ENABLED_DIR/"
-        else
-            echo "File already exists, skipping download."
+        if [ ! -f "$CONF_FILE" ]; then
+            curl -fsSL "$SITE_TEMPLATE_URL" -o "$CONF_FILE"
+            chmod 600 "$CONF_FILE"
+            ln -sf "$CONF_FILE" "$SITE_ENABLED_DIR/"
         fi
-        
 
-        # 替换模板变量
+        # 替换变量
         sed -i \
-            -e "s|%DOMAIN%|$SITE_domain|g" \
-            -e "s|%WEB_ROOT%|$SITE_web|g" \
-            -e "s|%SSL_DIR%|$SITE_SSL_BASE_DIR/$SITE_domain|g" \
+            -e "s|%DOMAIN%|$DOMAIN|g" \
+            -e "s|%WEB_ROOT%|$WEB_ROOT|g" \
+            -e "s|%SSL_DIR%|$SITE_SSL_BASE_DIR/$DOMAIN|g" \
             -e "s|%SITE_OPT%|$SITE_OPT|g" \
-            "$SITE_conf"
+            "$CONF_FILE"
 
-        generate_dhparam
-        issue_cert "$SITE_domain" || echo "⚠️ $SITE_domain 证书申请失败，可重试"
+        # 申请证书
+        issue_cert "$DOMAIN" || echo "⚠️ $DOMAIN 证书申请失败，可重试"
 
-        echo "✅ 网站创建完成：$SITE_domain"
-        echo "📁 网站根目录：$SITE_web"
-        echo "📄 配置文件：$SITE_conf"
-        echo "🔒 SSL 证书目录：$SITE_SSL_BASE_DIR/$SITE_domain"
+        echo "✅ 网站创建完成：$DOMAIN"
+        echo "📁 网站根目录：$WEB_ROOT"
+        echo "📄 配置文件：$CONF_FILE"
+        echo "🔒 SSL 证书目录：$SITE_SSL_BASE_DIR/$DOMAIN"
     done
 
     nginx_reload
 }
 
-
 # ----------------------------
 # 删除网站
 # ----------------------------
 delete_site() {
-    local SITE_SITE_domains="$1"
+    local DOMAINS="$1"
 
-    for SITE_domain in $SITE_SITE_domains; do
-        rm -f "$SITE_ENABLED_DIR/$SITE_domain.conf"
+    for DOMAIN in $DOMAINS; do
+        rm -f "$SITE_ENABLED_DIR/$DOMAIN.conf"
 
-        read -p "删除网站目录 $SITE_domain？(y/n): " a
-        [[ "$a" =~ ^[Yy]$ ]] && rm -rf "/www/wwwroot/$SITE_domain"
+        read -p "删除网站目录 $DOMAIN？(y/n): " a
+        [[ "$a" =~ ^[Yy]$ ]] && rm -rf "/www/wwwroot/$DOMAIN"
 
-        read -p "删除配置文件 $SITE_domain？(y/n): " b
-        [[ "$b" =~ ^[Yy]$ ]] && rm -f "$SITE_CONF_DIR/$SITE_domain.conf"
+        read -p "删除配置文件 $DOMAIN？(y/n): " b
+        [[ "$b" =~ ^[Yy]$ ]] && rm -f "$SITE_CONF_DIR/$DOMAIN.conf"
 
-        if acme.sh --list | grep -qw "$SITE_domain"; then
-            acme.sh --remove -d "$SITE_domain"
-            echo "✅ $SITE_domain 证书已撤销"
+        if acme.sh --list | grep -qw "$DOMAIN"; then
+            acme.sh --remove -d "$DOMAIN"
+            echo "✅ $DOMAIN 证书已撤销"
         fi
 
-        echo "✅ 网站已删除：$SITE_domain"
+        echo "✅ 网站已删除：$DOMAIN"
     done
 
     nginx_reload
 }
 
 # ============================
-# 主菜单（含退出）
+# 主菜单
 # ============================
 while true; do
     echo
@@ -253,18 +237,18 @@ while true; do
     echo "1) 创建网站"
     echo "2) 删除网站"
     echo "0) 退出"
-    read -r ACTION </dev/tty
+    read -r ACTION
 
     case "$ACTION" in
         1)
-            read -r -p "请输入域名（空格分隔）: " SITE_domain </dev/tty
-            create_site "$SITE_domain"
-            select_dns_SITE_provider
+            read -r -p "请输入域名（空格分隔）: " DOMAIN
+            select_dns_site_provider
             setup_dns_api
+            create_site "$DOMAIN"
             ;;
         2)
-            read -r -p "请输入域名（空格分隔）: " SITE_domain </dev/tty
-            delete_site "$SITE_domain"
+            read -r -p "请输入域名（空格分隔）: " DOMAIN
+            delete_site "$DOMAIN"
             ;;
         0)
             echo "👋 已退出"
