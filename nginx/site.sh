@@ -42,7 +42,7 @@ command -v acme.sh >/dev/null 2>&1 || {
 # 严格域名验证
 # ----------------------------
 validate_site_domain() {
-    [[ "$1" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$ ]]
+    [[ "$1" =~ ^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$ ]]
 }
 
 # ----------------------------
@@ -112,34 +112,49 @@ setup_dns_api() {
 }
 
 # ----------------------------
-# 证书申请
+# 提取根域名
 # ----------------------------
-issue_cert() {
+get_root_domain() {
     local DOMAIN="$1"
-    local SSL_DIR="$SITE_SSL_BASE_DIR/$DOMAIN"
+    # 仅适用于常规域名，例如 sub.example.com -> example.com
+    echo "$DOMAIN" | awk -F. '{n=NF; print $(n-1)"."$n}'
+}
 
-    if [ -f "$SSL_DIR/fullchain.pem" ]; then
-        echo "✅ $DOMAIN 证书已存在，跳过申请"
+# ----------------------------
+# 证书申请（通配符）
+# ----------------------------
+declare -A CERT_APPLIED  # 用于记录已申请的根域名
+
+issue_cert_wildcard() {
+    local DOMAIN="$1"
+    local ROOT_DOMAIN
+    ROOT_DOMAIN=$(get_root_domain "$DOMAIN")
+    
+    if [[ -n "${CERT_APPLIED[$ROOT_DOMAIN]+x}" ]]; then
+        echo "✅ 根域名 $ROOT_DOMAIN 已申请通配符证书，跳过"
         return
     fi
 
-    echo "📄 正在申请 $DOMAIN 证书..."
-    if ! acme.sh --issue -d "$DOMAIN" --dns dns_"$SITE_PROVIDER" --keylength 2048; then
-        echo "❌ 证书申请失败：$DOMAIN"
-        acme.sh --remove -d "$DOMAIN" 2>/dev/null || true
+    local SSL_DIR="$SITE_SSL_BASE_DIR/$ROOT_DOMAIN"
+    mkdir -p "$SSL_DIR"
+
+    echo "📄 正在为根域名 $ROOT_DOMAIN 申请通配符证书..."
+    if ! acme.sh --issue -d "*.$ROOT_DOMAIN" -d "$ROOT_DOMAIN" --dns dns_"$SITE_PROVIDER" --keylength 2048; then
+        echo "❌ 证书申请失败：$ROOT_DOMAIN"
+        acme.sh --remove -d "*.$ROOT_DOMAIN" -d "$ROOT_DOMAIN" 2>/dev/null || true
         return 1
     fi
 
-    mkdir -p "$SSL_DIR"
-    chmod 700 "$SSL_DIR"
-    acme.sh --install-cert -d "$DOMAIN" \
+    acme.sh --install-cert -d "*.$ROOT_DOMAIN" -d "$ROOT_DOMAIN" \
         --key-file "$SSL_DIR/privkey.pem" \
         --fullchain-file "$SSL_DIR/fullchain.pem" \
         --ca-file "$SSL_DIR/ca.pem" \
         --reloadcmd "systemctl reload nginx"
 
     find "$SSL_DIR" -type f -exec chmod 600 {} \;
-    echo "✅ $DOMAIN 证书申请完成"
+
+    CERT_APPLIED["$ROOT_DOMAIN"]=1
+    echo "✅ 通配符证书申请完成：$ROOT_DOMAIN"
 }
 
 # ----------------------------
@@ -172,8 +187,8 @@ create_site() {
 
         mkdir -p "$WEB_ROOT"
         chown -R "$SITE_NGINX_USER:$SITE_NGINX_GROUP" "$WEB_ROOT"
-        mkdir -p "$SITE_CONF_DIR" "$SITE_ENABLED_DIR" "$SITE_SSL_BASE_DIR/$DOMAIN"
-        chmod 700 "$SITE_SSL_BASE_DIR/$DOMAIN"
+        mkdir -p "$SITE_CONF_DIR" "$SITE_ENABLED_DIR" "$SITE_SSL_BASE_DIR"
+        chmod 700 "$SITE_SSL_BASE_DIR"
 
         # 下载模板
         if [ ! -f "$CONF_FILE" ]; then
@@ -186,25 +201,22 @@ create_site() {
         sed -i \
             -e "s|%DOMAIN%|$DOMAIN|g" \
             -e "s|%WEB_ROOT%|$WEB_ROOT|g" \
-            -e "s|%SSL_DIR%|$SITE_SSL_BASE_DIR/$DOMAIN|g" \
+            -e "s|%SSL_DIR%|$SITE_SSL_BASE_DIR/$(get_root_domain $DOMAIN)|g" \
             -e "s|%SITE_OPT%|$SITE_OPT|g" \
             "$CONF_FILE"
 
-        # 申请证书
-        issue_cert "$DOMAIN" || echo "⚠️ $DOMAIN 证书申请失败，可重试"
+        # 申请通配符证书
+        issue_cert_wildcard "$DOMAIN" || echo "⚠️ $DOMAIN 证书申请失败，可重试"
 
         echo "✅ 网站创建完成：$DOMAIN"
         echo "📁 网站根目录：$WEB_ROOT"
         echo "📄 配置文件：$CONF_FILE"
-        echo "🔒 SSL 证书目录：$SITE_SSL_BASE_DIR/$DOMAIN"
+        echo "🔒 SSL 证书目录：$SITE_SSL_BASE_DIR/$(get_root_domain $DOMAIN)"
     done
 
     nginx_reload
 }
 
-# ----------------------------
-# 删除网站
-# ----------------------------
 delete_site() {
     local DOMAINS="$1"
 
@@ -217,9 +229,26 @@ delete_site() {
         read -p "删除配置文件 $DOMAIN？(y/n): " b
         [[ "$b" =~ ^[Yy]$ ]] && rm -f "$SITE_CONF_DIR/$DOMAIN.conf"
 
-        if acme.sh --list | grep -qw "$DOMAIN"; then
-            acme.sh --remove -d "$DOMAIN"
-            echo "✅ $DOMAIN 证书已撤销"
+        local ROOT_DOMAIN
+        ROOT_DOMAIN=$(get_root_domain "$DOMAIN")
+
+        # 检查是否还有其他域名（顶级或二级）使用该根域名证书
+        local REMAINING=0
+        for d in /www/wwwroot/*; do
+            [[ -d "$d" ]] || continue
+            local DN
+            DN=$(basename "$d")
+            [[ "$DN" == "$DOMAIN" ]] && continue
+            [[ "$(get_root_domain "$DN")" == "$ROOT_DOMAIN" ]] && REMAINING=1 && break
+        done
+
+        if [[ $REMAINING -eq 0 ]]; then
+            if acme.sh --list | grep -qw "$ROOT_DOMAIN"; then
+                acme.sh --remove -d "*.$ROOT_DOMAIN" -d "$ROOT_DOMAIN"
+                echo "✅ 根域名 $ROOT_DOMAIN 通配符证书已撤销"
+            fi
+        else
+            echo "⚠️ 根域名 $ROOT_DOMAIN 仍有其他域名使用，证书保留"
         fi
 
         echo "✅ 网站已删除：$DOMAIN"
