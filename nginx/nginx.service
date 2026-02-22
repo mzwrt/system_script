@@ -73,7 +73,8 @@ RestrictNamespaces=true
 # 禁止写入 /dev/shm 和 /run/shm，防止利用共享内存进行通信或逃逸
 #ProtectSHM=true
 # 隔离网络命名空间（仅 root 用户启动时建议）
-RestrictNetworkInterfaces=true
+# 报错问题没找到暂时禁用
+#RestrictNetworkInterfaces=true
 #  防止创建 SUID/SGID 文件
 RestrictSUIDSGID=yes
 # 限制 CPU 架构调用
