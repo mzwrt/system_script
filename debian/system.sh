@@ -15,8 +15,8 @@ echo "请输入以下信息以开始系统配置："
 
 # 提示用户输入用户名
 while true; do
-    read -p "请输入用户名: " USER
-    if [ -z "$USER" ]; then
+    read -p "请输入用户名: " NEW_USER
+    if [ -z "$NEW_USER" ]; then
         echo "用户名不能为空，请重新输入。"
     else
         break
@@ -40,6 +40,8 @@ while true; do
     read -p "公钥: " SSH_KEY
     if [ -z "$SSH_KEY" ]; then
         echo "SSH 公钥不能为空，请重新输入。"
+    elif ! echo "$SSH_KEY" | grep -qE '^(ssh-rsa|ssh-ed25519|ssh-ecdsa|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521|sk-ssh-ed25519|sk-ecdsa-sha2-nistp256) [A-Za-z0-9+/]'; then
+        echo "SSH 公钥格式不合法，请输入有效的 SSH 公钥（以 ssh-rsa、ssh-ed25519 等开头）。"
     else
         break
     fi
@@ -98,39 +100,40 @@ timedatectl set-timezone Asia/Shanghai
 # 4. 用户设置与 SSH 配置
 # ==========================
 # 检查用户是否存在
-if id "$USER" &>/dev/null; then
-    echo "用户 $USER 已存在，继续操作..."
+if id "$NEW_USER" &>/dev/null; then
+    echo "用户 $NEW_USER 已存在，继续操作..."
 else
-    echo "用户 $USER 不存在，正在创建用户..."
+    echo "用户 $NEW_USER 不存在，正在创建用户..."
     # 创建用户并设置密码
-    useradd -m -s /bin/bash "$USER"
-    echo "$USER:$PASSWORD" | chpasswd
-    echo "用户 $USER 创建完成并设置密码。"
+    useradd -m -s /bin/bash "$NEW_USER"
+    printf '%s:%s\n' "$NEW_USER" "$PASSWORD" | chpasswd
+    echo "用户 $NEW_USER 创建完成并设置密码。"
 fi
 
 # 设置 SSH 公钥
-SSH_DIR="/home/$USER/.ssh"
+SSH_DIR="/home/$NEW_USER/.ssh"
 AUTHORIZED_KEYS="$SSH_DIR/authorized_keys"
-echo "正在为用户 $USER 创建 .ssh 目录和 authorized_keys 文件..."
-mkdir -p $SSH_DIR
-echo "$SSH_KEY" > $AUTHORIZED_KEYS
+echo "正在为用户 $NEW_USER 创建 .ssh 目录和 authorized_keys 文件..."
+mkdir -p "$SSH_DIR"
+echo "$SSH_KEY" > "$AUTHORIZED_KEYS"
 
 # 修正目录和文件所有者
-echo "设置 .ssh 目录及 authorized_keys 文件所有者为 $USER..."
-chown -R $USER:$USER $SSH_DIR
+echo "设置 .ssh 目录及 authorized_keys 文件所有者为 $NEW_USER..."
+chown -R "$NEW_USER:$NEW_USER" "$SSH_DIR"
 
 # 修改权限
 echo "设置 .ssh 目录和 authorized_keys 文件的权限..."
-chmod 700 $SSH_DIR
-chmod 600 $AUTHORIZED_KEYS
+chmod 700 "$SSH_DIR"
+chmod 600 "$AUTHORIZED_KEYS"
 
 # 自动编辑 sudoers 文件并添加权限
-echo "正在为用户 $USER 自动添加 sudo 权限..."
-if ! grep -q "^$USER" /etc/sudoers; then
-    echo "$USER ALL=(ALL) NOPASSWD:ALL" | tee -a /etc/sudoers > /dev/null
-    echo "已成功为 $USER 添加 sudo 权限。"
+echo "正在为用户 $NEW_USER 自动添加 sudo 权限..."
+if ! grep -q "^$NEW_USER" /etc/sudoers; then
+    SUDOERS_LINE="$NEW_USER ALL=(ALL) NOPASSWD:ALL"
+    echo "$SUDOERS_LINE" | EDITOR='tee -a' visudo > /dev/null
+    echo "已成功为 $NEW_USER 添加 sudo 权限。"
 else
-    echo "$USER 已经具有 sudo 权限，无需修改。"
+    echo "$NEW_USER 已经具有 sudo 权限，无需修改。"
 fi
 
 # ==========================
@@ -151,11 +154,11 @@ sed -i "s/^Port 22/Port $SSH_PORT/" /etc/ssh/sshd_config
 
 # 修改 AllowUsers 和 AllowGroups 字段
 echo "正在修改 AllowUsers 和 AllowGroups 字段..."
-sed -i "/^#AllowUsers/ c\AllowUsers $USER" /etc/ssh/sshd_config
-sed -i "/^AllowUsers/ c\AllowUsers $USER" /etc/ssh/sshd_config
+sed -i "/^#AllowUsers/ c\AllowUsers $NEW_USER" /etc/ssh/sshd_config
+sed -i "/^AllowUsers/ c\AllowUsers $NEW_USER" /etc/ssh/sshd_config
 
-sed -i "/^#AllowGroups/ c\AllowGroups $USER" /etc/ssh/sshd_config
-sed -i "/^AllowGroups/ c\AllowGroups $USER" /etc/ssh/sshd_config
+sed -i "/^#AllowGroups/ c\AllowGroups $NEW_USER" /etc/ssh/sshd_config
+sed -i "/^AllowGroups/ c\AllowGroups $NEW_USER" /etc/ssh/sshd_config
 
 # ==========================
 # 6. 自动检测防火墙并放通端口
@@ -313,8 +316,8 @@ echo "操作已完成！以下是系统配置的详细信息："
 echo "===================================="
 echo "系统语言已设置为中文简体，时区已设置为中国（上海）。"
 echo "SSH 服务已配置，新的端口为：$SSH_PORT。"
-echo "已为用户 $USER 配置了 SSH 登录权限，允许登录的组为：$USER。"
-echo "已为用户 $USER 配置了 sudo 权限和 sudo 免密码登陆权限。"
+echo "已为用户 $NEW_USER 配置了 SSH 登录权限，允许登录的组为：$NEW_USER。"
+echo "已为用户 $NEW_USER 配置了 sudo 权限和 sudo 免密码登陆权限。"
 echo "防火墙已配置，端口 $SSH_PORT 已成功放通。"
 echo "如有需要，请重启 SSH 服务以确保配置生效。"
 echo "已经将vi 配置文件下载到/root/.vimrc如果不喜欢配置风格可以使用此命令删除：rm -f /root/.vimrc"

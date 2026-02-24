@@ -92,14 +92,12 @@ PermitTunnel no
 AllowStreamLocalForwarding no
 AllowTcpForwarding no
 AllowAgentForwarding no
-RekeyLimit 512M\s+6h
+RekeyLimit 512M 6h
 GSSAPIKeyExchange no
 GSSAPIAuthentication no
-HostbasedAuthentication no
 KerberosAuthentication no
 KbdInteractiveAuthentication no
 maxstartups 10:30:60
-AllowTCPForwarding no
 banner /etc/issue.net
 DenyGroups nobody www php mysql www-data smmta smmsp smmsp backup proxy mail games
 DenyUsers nobody www php mysql www-data smmta smmsp smmsp backup proxy mail games

@@ -107,7 +107,8 @@ async def webhook():
 
         return Response("不支持的方法", status=405)
     except Exception as e:
-        return Response(f"内部错误: {str(e)}", status=500)
+        app.logger.error(f"Webhook error: {e}")
+        return Response("内部错误", status=500)
 
 # 启动 Hypercorn
 if __name__ == '__main__':
