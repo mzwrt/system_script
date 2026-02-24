@@ -1,7 +1,7 @@
 #!/bin/bash
 
 INSTALL_DIR="/mnt/xray"
-USER="xvpn"
+XRAY_USER="xvpn"
 
 # 下载最新 Xray 版本函数
 download_xray() {
@@ -21,11 +21,11 @@ download_xray() {
 
     # 下载并解压 Xray
     echo "下载 Xray 版本 $LATEST_VERSION..."
-    curl -L $DOWNLOAD_URL -o $INSTALL_DIR/Xray-linux-64.zip
+    curl -L "$DOWNLOAD_URL" -o "$INSTALL_DIR/Xray-linux-64.zip"
 
     # 解压并清理
-    unzip -o $INSTALL_DIR/Xray-linux-64.zip -d $INSTALL_DIR
-    rm -f $INSTALL_DIR/Xray-linux-64.zip
+    unzip -o "$INSTALL_DIR/Xray-linux-64.zip" -d "$INSTALL_DIR"
+    rm -f "$INSTALL_DIR/Xray-linux-64.zip"
 }
 
 # 创建安装、卸载函数
@@ -33,34 +33,34 @@ install_xray() {
     echo "开始安装 Xray..."
 
     # 创建用户 'xvpn'，如果不存在
-    if ! id -u $USER &>/dev/null; then
-        echo "创建用户 $USER..."
-        useradd -m -r -s /bin/false $USER
+    if ! id -u "$XRAY_USER" &>/dev/null; then
+        echo "创建用户 $XRAY_USER..."
+        useradd -m -r -s /bin/false "$XRAY_USER"
     fi
 
     # 确保安装目录存在
-    mkdir -p $INSTALL_DIR
+    mkdir -p "$INSTALL_DIR"
 
     # 下载并安装最新版本
     download_xray
 
     # 下载配置文件
-    if [ ! -f $INSTALL_DIR/config.json ]; then
-        wget -q -O $INSTALL_DIR/config.json "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/xray/config.json"
+    if [ ! -f "$INSTALL_DIR/config.json" ]; then
+        wget -q -O "$INSTALL_DIR/config.json" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/xray/config.json"
     fi
     # 日志配置
     if [ ! -f "/etc/logrotate.d/xray" ]; then
         wget -q -O "/etc/logrotate.d/xray" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/xray/xray"
-        sed -i "s|\\$USER|$USER|g" "/etc/logrotate.d/xray"
+        sed -i "s|\\$USER|$XRAY_USER|g" "/etc/logrotate.d/xray"
     fi
 
     # 设置权限
-    chown -R $USER:$USER $INSTALL_DIR
+    chown -R "$XRAY_USER:$XRAY_USER" "$INSTALL_DIR"
 
     # 创建 systemd 服务文件
     wget -q -O /etc/systemd/system/xray.service "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/xray/xray.service"
-    sed -i "s|\$INSTALL_DIR|$INSTALL_DIR|g" /etc/systemd/system/xray.service
-    sed -i "s|\$USER|$USER|g" /etc/systemd/system/xray.service
+    sed -i "s|\$INSTALL_DIR|$INSTALL_DIR|g" "/etc/systemd/system/xray.service"
+    sed -i "s|\$USER|$XRAY_USER|g" "/etc/systemd/system/xray.service"
     
     # 重新加载 systemd 配置并启动服务
     systemctl daemon-reload
@@ -81,7 +81,7 @@ upgrade_xray() {
     download_xray
 
     # 修复权限
-    chown -R $USER:$USER $INSTALL_DIR
+    chown -R "$XRAY_USER:$XRAY_USER" "$INSTALL_DIR"
 
     # 启动服务
     systemctl start xray.service
@@ -100,10 +100,10 @@ uninstall_xray() {
     rm -f /etc/systemd/system/xray.service
 
     # 删除安装目录
-    rm -rf $INSTALL_DIR
+    rm -rf "$INSTALL_DIR"
 
     # 删除用户
-    userdel -r $USER
+    userdel -r "$XRAY_USER"
 
     # 重新加载 systemd 配置
     systemctl daemon-reload
