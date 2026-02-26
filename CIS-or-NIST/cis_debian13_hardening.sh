@@ -1,10 +1,10 @@
 #!/bin/bash
 # =============================================================================
 #  CIS Debian Linux 13 Benchmark v1.1.0 完整硬化脚本
-#  参考标准：CIS Debian Linux 13 Benchmark v1.1.0（2024年9月）
-#  适用系统：Debian 12 (Bookworm)
+#  参考标准：CIS Debian Linux 13 Benchmark v1.0.0（2026年2月）
+#  适用系统：Debian 13 (trixie)
 #
-#  使用方法：sudo bash cis_debian12_hardening.sh
+#  使用方法：sudo bash cis_debian13_hardening.sh
 #
 #  流程：
 #    Step 1 → 预审计（检查每一条是否符合 CIS 标准）
