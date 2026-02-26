@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-#  CIS Debian Linux 13 Benchmark v1.1.0 完整硬化脚本
+#  CIS Debian Linux 13 Benchmark v1.0.0 完整硬化脚本
 #  参考标准：CIS Debian Linux 13 Benchmark v1.0.0（2026年2月）
 #  适用系统：Debian 13 (trixie)
 #
@@ -1886,7 +1886,7 @@ main() {
     clear
     echo -e "${BOLD}${BLUE}"
     echo "  ╔══════════════════════════════════════════════════════════╗"
-    echo "  ║      CIS Debian Linux 13 Benchmark v1.1.0                ║"
+    echo "  ║      CIS Debian Linux 13 Benchmark v1.0.0                ║"
     echo "  ║      完整硬化脚本（审计 → 修复 → 验证）                  ║"
     echo "  ╚══════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
