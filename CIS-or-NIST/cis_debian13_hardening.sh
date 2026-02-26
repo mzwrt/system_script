@@ -1,7 +1,7 @@
 #!/bin/bash
 # =============================================================================
-#  CIS Debian Linux 12 Benchmark v1.1.0 完整硬化脚本
-#  参考标准：CIS Debian Linux 12 Benchmark v1.1.0（2024年9月）
+#  CIS Debian Linux 13 Benchmark v1.1.0 完整硬化脚本
+#  参考标准：CIS Debian Linux 13 Benchmark v1.1.0（2024年9月）
 #  适用系统：Debian 12 (Bookworm)
 #
 #  使用方法：sudo bash cis_debian12_hardening.sh
@@ -1886,7 +1886,7 @@ main() {
     clear
     echo -e "${BOLD}${BLUE}"
     echo "  ╔══════════════════════════════════════════════════════════╗"
-    echo "  ║      CIS Debian Linux 12 Benchmark v1.1.0                ║"
+    echo "  ║      CIS Debian Linux 13 Benchmark v1.1.0                ║"
     echo "  ║      完整硬化脚本（审计 → 修复 → 验证）                  ║"
     echo "  ╚══════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
