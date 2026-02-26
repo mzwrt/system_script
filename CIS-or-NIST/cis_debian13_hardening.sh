@@ -56,8 +56,8 @@ ENABLE_1_2_1=true      # 1.2.1  确保 apt 使用 HTTPS
 ENABLE_1_2_2=true      # 1.2.2  确保 apt 源使用 GPG 签名验证
 
 # ---- 1.3 文件完整性检查 ----
-ENABLE_1_3_1=true      # 1.3.1  安装 AIDE
-ENABLE_1_3_2=true      # 1.3.2  配置 AIDE 定期检查（cron）
+ENABLE_1_3_1=false      # 1.3.1  安装 AIDE
+ENABLE_1_3_2=false      # 1.3.2  配置 AIDE 定期检查（cron）
 
 # ---- 1.4 安全启动设置 ----
 ENABLE_1_4_1=true      # 1.4.1  确保 GRUB 引导加密（需交互输入密码）
