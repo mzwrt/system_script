@@ -1,0 +1,175 @@
+详细使用步骤
+第一步：创建目录结构
+bash# 建议放 /opt，生产目录规范
+sudo mkdir -p /opt/mysql-prod/{conf,logs,init,certs,backup}
+cd /opt/mysql-prod
+```
+
+---
+
+### 第二步：放置所有文件
+
+把之前下载的文件按以下结构放好：
+```
+/opt/mysql-prod/
+├── .env                          ← 环境变量
+├── docker-compose.yml            ← 容器编排
+├── deploy.sh                     ← 一键部署脚本
+├── gen-certs.sh                  ← TLS证书生成
+├── backup.sh                     ← 备份脚本
+├── cis-check.sh                  ← CIS合规检查
+├── conf/
+│   └── my.cnf                   ← 刚下载的这个文件放这里
+├── init/
+│   └── 01-security-init.sql     ← 初始化SQL
+├── certs/                        ← 证书（自动生成）
+├── logs/                         ← 日志（自动生成）
+└── backup/                       ← 备份（自动生成）
+bash# 给脚本加执行权限
+chmod +x /opt/mysql-prod/*.sh
+
+第三步：修改密码（必须，不改不能启动）
+修改 .env：
+bashnano /opt/mysql-prod/.env
+```
+把4个 `CHANGE_THIS_*` 全部替换成你的真实强密码，例如：
+```
+MYSQL_ROOT_PASSWORD=MyRoot@Prod#2024Abc!
+MYSQL_DATABASE=appdb
+MYSQL_USER=appuser
+MYSQL_PASSWORD=MyApp@Prod#2024Xyz!
+MONITOR_PASSWORD=MyMonitor@2024Qrs!
+同步修改 init.sql 中的3处密码：
+bashnano /opt/mysql-prod/init/01-security-init.sql
+找到3处 CHANGE_THIS_*，改成与 .env 一致的密码：
+sql-- appuser 的密码 → 与 .env MYSQL_PASSWORD 一致
+BY 'MyApp@Prod#2024Xyz!'
+
+-- readonly 账号密码（自定义一个）
+BY 'MyRead@Prod#2024Uvw!'
+
+-- monitor 账号密码 → 与 .env MONITOR_PASSWORD 一致
+BY 'MyMonitor@2024Qrs!'
+保护 .env 文件：
+bashchmod 600 /opt/mysql-prod/.env
+
+第四步：生成TLS证书
+bashcd /opt/mysql-prod
+./gen-certs.sh
+```
+
+正常输出如下，最后显示验证通过即成功：
+```
+>>> 生成 CA 根证书...
+>>> 生成服务端证书...
+>>> 生成客户端证书...
+✅ 证书生成完毕
+>>> 验证证书链...
+server-cert.pem: OK
+client-cert.pem: OK
+✅ 证书链验证通过
+
+第五步：启动
+bashcd /opt/mysql-prod
+
+# 确保日志目录容器内可写
+chmod 777 logs
+
+# 启动
+docker compose up -d
+观察启动日志（重要，首次启动需要初始化）：
+bashdocker compose logs -f mysql
+```
+
+等待出现以下内容说明启动成功，按 `Ctrl+C` 退出日志：
+```
+[Server] /usr/sbin/mysqld: ready for connections. 
+Version: '8.0.36'  port: 3306
+查看容器健康状态：
+bashdocker compose ps
+# STATUS 列显示 healthy 才算完全就绪（约需60-90秒）
+
+第六步：验证CIS合规
+bash./cis-check.sh
+```
+
+正常应全部 ✅，输出示例：
+```
+════════════════════════════════════════════════
+  CIS MySQL 8.0 Benchmark 检查
+════════════════════════════════════════════════
+✅ PASS CIS 0.0 | 容器健康状态 (healthy)
+✅ PASS CIS 2.1 | local_infile=OFF
+✅ PASS CIS 2.2 | skip_grant_tables=OFF
+✅ PASS CIS 2.5 | skip_show_database=ON
+✅ PASS CIS 6.1 | SSL已启用
+✅ PASS CIS 6.2 | require_secure_transport=ON
+...
+  结果：通过 15 | 失败 0 | 警告 0
+✅ 所有关键检查通过
+
+第七步：PHP 容器连接 MySQL
+在你的 PHP 容器的 docker-compose.yml 中加入网络配置：
+yamlnetworks:
+  mysql-net:
+    external: true      # 引用已存在的网络
+    name: mysql-net
+
+services:
+  php:
+    # ... 你原有的配置 ...
+    networks:
+      - mysql-net        # 加入 mysql 网络
+PHP 代码连接配置（使用容器名作为主机名）：
+php// PHP PDO 示例
+$pdo = new PDO(
+    'mysql:host=mysql-prod;port=3306;dbname=appdb;charset=utf8mb4',
+    'appuser',
+    'MyApp@Prod#2024Xyz!',
+    [
+        PDO::MYSQL_ATTR_SSL_CA   => '/etc/mysql/certs/ca-cert.pem',
+        PDO::MYSQL_ATTR_SSL_CERT => '/etc/mysql/certs/client-cert.pem',
+        PDO::MYSQL_ATTR_SSL_KEY  => '/etc/mysql/certs/client-key.pem',
+        PDO::ATTR_ERRMODE        => PDO::ERRMODE_EXCEPTION,
+    ]
+);
+
+证书需要同步挂载到 PHP 容器中：在 PHP 的 volumes 里加上 ./certs:/etc/mysql/certs:ro
+
+
+日常运维命令
+bash# 查看运行状态
+docker compose ps
+
+# 实时查看错误日志
+docker compose logs -f mysql
+
+# 查看慢查询日志
+tail -f /opt/mysql-prod/logs/slow.log
+
+# 进入 MySQL 命令行（root）
+docker exec -it mysql-prod mysql -u root -p
+
+# 手动立即备份
+./backup.sh
+
+# 重启 MySQL（配置变更后）
+docker compose restart mysql
+
+# 停止（数据不丢失）
+docker compose stop mysql
+
+# 彻底删除容器但保留数据
+docker compose down
+
+# 彻底删除包括数据（危险！）
+docker compose down -v
+
+自动备份已配置
+deploy.sh 运行时会自动注册 crontab，每天凌晨2点备份：
+bash# 查看是否注册成功
+crontab -l | grep backup
+
+# 备份文件位置
+ls -lh /opt/mysql-prod/backup/
+# appdb_20240115_020001.sql.gz  ← 自动保留7天
