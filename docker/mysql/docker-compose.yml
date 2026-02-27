@@ -1,0 +1,109 @@
+version: "3.9"
+
+# ══════════════════════════════════════════════════════════
+# MySQL 8.0 生产级 Docker Compose
+# 安全 / 稳定 / 高效 / CIS合规 / 长期运行
+# ══════════════════════════════════════════════════════════
+
+services:
+  mysql:
+    image: mysql:8.0.36                  # 固定版本，禁用 latest，确保稳定
+    container_name: mysql-prod
+    hostname: mysql-prod
+    restart: unless-stopped              # 异常自动重启，手动 stop 不重启
+
+    env_file:
+      - .env                             # 敏感信息隔离到 .env
+
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE:      ${MYSQL_DATABASE}
+      MYSQL_USER:          ${MYSQL_USER}
+      MYSQL_PASSWORD:      ${MYSQL_PASSWORD}
+      TZ:                  Asia/Shanghai
+
+    ports:
+      - "127.0.0.1:3306:3306"            # 只绑定本地回环，不对公网暴露
+                                          # 其他容器通过 network 访问，无需映射宿主机
+
+    volumes:
+      # 数据目录（持久化，最重要）
+      - mysql_data:/var/lib/mysql
+
+      # 配置文件（只读挂载，防止运行时被篡改）
+      - ./conf/my.cnf:/etc/mysql/conf.d/production.cnf:ro
+
+      # 日志目录（持久化，便于排查）
+      - ./logs:/var/log/mysql
+
+      # 初始化脚本（只读挂载，只在首次启动执行一次）
+      - ./init:/docker-entrypoint-initdb.d:ro
+
+      # TLS证书（只读挂载）
+      - ./certs:/etc/mysql/certs:ro
+
+      # 备份目录
+      - ./backup:/backup
+
+    # ── 容器最小权限 ──────────────────────────────────────
+    user: "999:999"                        # mysql官方镜像的uid/gid
+    security_opt:
+      - no-new-privileges:true             # 禁止进程提权
+    cap_drop:
+      - ALL                                # 先删除全部 Linux Capabilities
+    cap_add:
+      - CHOWN                              # 初始化时需要修改文件属主
+      - SETUID                             # 切换到 mysql 用户
+      - SETGID                             # 切换到 mysql 组
+      - DAC_OVERRIDE                       # 读写数据目录
+
+    # ── 资源硬限制（防止 MySQL 吃光所有资源影响系统稳定）──
+    deploy:
+      resources:
+        limits:
+          cpus: "3.0"                      # 10610U 6核，MySQL 最多占3核
+          memory: 2560M                    # 2G buffer_pool + 512M 其他开销
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+    # ── 健康检查（容器编排和监控依赖） ────────────────────
+    healthcheck:
+      test:
+        - "CMD"
+        - "mysqladmin"
+        - "ping"
+        - "-h"
+        - "localhost"
+        - "-u"
+        - "monitor"
+        - "--password=${MONITOR_PASSWORD}"
+        - "--ssl-ca=/etc/mysql/certs/ca-cert.pem"
+      interval: 30s        # 每30秒检查一次
+      timeout: 10s         # 10秒超时
+      retries: 5           # 失败5次才标记 unhealthy
+      start_period: 90s    # 启动初始化期间不算失败（首次建库需要时间）
+
+    # ── 日志配置（防止日志文件无限增长撑爆磁盘） ─────────
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+    networks:
+      - mysql-net
+
+# ── 使用具名卷，数据不随容器删除而丢失 ───────────────────
+volumes:
+  mysql_data:
+    driver: local
+
+# ── 独立网络，与其他服务隔离 ──────────────────────────────
+networks:
+  mysql-net:
+    name: mysql-net              # 固定网络名，其他容器可通过 external 引用
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
