@@ -6,7 +6,7 @@ XRAY_USER="xvpn"
 # 下载最新 Xray 版本函数
 download_xray() {
     # 获取最新的 Xray 版本
-    LATEST_VERSION=$(curl -s https://api.github.com/repos/XTLS/Xray-core/releases/latest | sed -n 's/.*"tag_name": "\(v[0-9]\+\.[0-9]\+\.[0-9]\+\)".*/\1/p')
+    LATEST_VERSION=$(curl -s https://api.github.com/repos/XTLS/Xray-core/releases/latest | sed -n 's/.*"tag_name": "\(v[0-9]*\.[0-9]*\.[0-9]*\)".*/\1/p')
 
     if [[ -z "$LATEST_VERSION" ]]; then
         echo "获取最新版本失败!"
