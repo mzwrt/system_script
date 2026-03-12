@@ -63,15 +63,13 @@ done
 # ==========================
 # 2. 替换 sysctl.conf 文件
 # ==========================
-echo "正在备份现有的 sysctl.conf 文件..."
-cp /etc/sysctl.conf /etc/sysctl.conf.bak
 
 echo "正在从指定链接下载新的 sysctl.conf 文件..."
-wget -O /etc/sysctl.conf https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/debian/system/sysctl.conf
+wget -O /etc/sysctl.d/99-custom.conf https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/debian/system/sysctl.conf
 
 # 加载新的 sysctl 配置
 echo "正在应用新的 sysctl 配置..."
-sysctl -p
+sysctl --system
 
 # ==========================
 # 3. 系统更新及安装软件
@@ -205,97 +203,59 @@ while true; do
 done
 
 # ==========================
-# 8. 是否安装 webmin
+# 8. 是否安装 cockpit
 # ==========================
 while true; do
-    read -p "是否安装 webmin ？(Y/N): " INSTALL_WEBMIN
-    case $INSTALL_WEBMIN in
+    read -p "是否安装 cockpit ？(Y/N): " INSTALL_COCKPIT
+    case $INSTALL_COCKPIT in
         [Yy]* )
-            echo "正在安装 webmin..."
-            curl -o webmin-setup-repo.sh https://raw.githubusercontent.com/webmin/webmin/master/webmin-setup-repo.sh && chmod +x webmin-setup-repo.sh
-            sudo sh webmin-setup-repo.sh
-            sudo apt-get update
-            sudo apt-get install webmin --install-recommends
-            echo "Webmin 已安装。"
-            
-            WEBMIN_PORT=10000
+            echo "正在安装 cockpit..."
+
+            . /etc/os-release
+
+            echo "deb http://deb.debian.org/debian ${VERSION_CODENAME}-backports main" \
+            > /etc/apt/sources.list.d/backports.list
+
+            cat > /etc/apt/preferences.d/backports << EOF
+Package: *
+Pin: release a=${VERSION_CODENAME}-backports
+Pin-Priority: 100
+EOF
+
+            apt update
+            apt install -t ${VERSION_CODENAME}-backports cockpit -y
+            wget -q https://github.com/45Drives/cockpit-navigator/releases/download/v0.5.10/cockpit-navigator_0.5.10-1focal_all.deb
+            apt install ./cockpit-navigator_0.5.10-1focal_all.deb -y
+            rm -f cockpit-navigator_0.5.10-1focal_all.deb
+
+            COCKPIT_PORT=9090
+
             echo "正在检测防火墙类型..."
-            
+
             if command -v ufw >/dev/null 2>&1; then
-               echo "检测到 ufw 防火墙，正在为 webmin 添加允许端口 $WEBMIN_PORT..."
-               sudo ufw allow $WEBMIN_PORT/tcp
-               sudo ufw reload
-               echo "端口 $WEBMIN_PORT 已允许通过 ufw。"
+               echo "检测到 ufw 防火墙，正在放行端口 $COCKPIT_PORT..."
+               ufw allow ${COCKPIT_PORT}/tcp
+               ufw reload
+
             elif command -v firewall-cmd >/dev/null 2>&1; then
-               echo "检测到 firewalld 防火墙，正在允许端口 $WEBMIN_PORT..."
-               sudo firewall-cmd --zone=public --add-port=$WEBMIN_PORT/tcp --permanent
-               sudo firewall-cmd --reload
-               echo "端口 $WEBMIN_PORT 已允许通过 firewalld。"
+               echo "检测到 firewalld 防火墙，正在放行端口 $COCKPIT_PORT..."
+               firewall-cmd --zone=public --add-port=${COCKPIT_PORT}/tcp --permanent
+               firewall-cmd --reload
+
             elif command -v iptables >/dev/null 2>&1; then
-               echo "检测到 iptables 防火墙，正在允许端口 $WEBMIN_PORT..."
-               sudo iptables -A INPUT -p tcp --dport $WEBMIN_PORT -j ACCEPT
-               sudo iptables-save
-               echo "端口 $WEBMIN_PORT 已允许通过 iptables。"
+               echo "检测到 iptables 防火墙，正在放行端口 $COCKPIT_PORT..."
+               iptables -A INPUT -p tcp --dport ${COCKPIT_PORT} -j ACCEPT
+
             else
-               echo "未检测到已知的防火墙类型，无法自动放通端口。"
+               echo "未检测到已知防火墙类型，请手动放行端口 ${COCKPIT_PORT}"
             fi
+
+            echo "Cockpit 安装完成，访问端口: ${COCKPIT_PORT}"
+
             break
             ;;
         [Nn]* )
-            echo "webmin 未安装。"
-            break
-            ;;
-        * )
-            echo "请输入 Y 或 N。"
-            ;;
-    esac
-done
-
-
-# ==========================
-# 9. 是否安装  webmin nginx 控制插件
-# ==========================
-while true; do
-    read -p "这是 webmin nginx 控制插件，是否安装 webmin virtualmin nginx控制插件 ？(Y/N): " INSTALL_WEBMIN_NGINX
-    case $INSTALL_WEBMIN_NGINX in
-        [Yy]* )
-            echo "正在安装 webmin nginx 和 webmin nginx-ssl 插件..."
-            sh -c "$(curl -fsSL https://software.virtualmin.com/gpl/scripts/virtualmin-install.sh)" -- --setup
-            sh webmin-setup-repo.sh
-            sudo apt-get update
-            sudo apt-get install webmin-virtualmin-nginx webmin-virtualmin-nginx-ssl
-            echo "Webmin 已安装 webmin nginx 和 webmin nginx-ssl 插件。"
-
-            HTTP_PORT=80
-            HTTPS_PORT=443
-            echo "正在检测防火墙类型..."
-
-            # 仅放通 HTTP（80）和 HTTPS（443）端口
-            if command -v ufw >/dev/null 2>&1; then
-               echo "检测到 ufw 防火墙，正在为 HTTP 和 HTTPS 端口添加允许规则..."
-               sudo ufw allow $HTTP_PORT/tcp
-               sudo ufw allow $HTTPS_PORT/tcp
-               sudo ufw reload
-               echo "端口 $HTTP_PORT, $HTTPS_PORT 已允许通过 ufw。"
-            elif command -v firewall-cmd >/dev/null 2>&1; then
-               echo "检测到 firewalld 防火墙，正在为 HTTP 和 HTTPS 端口添加允许规则..."
-               sudo firewall-cmd --zone=public --add-port=$HTTP_PORT/tcp --permanent
-               sudo firewall-cmd --zone=public --add-port=$HTTPS_PORT/tcp --permanent
-               sudo firewall-cmd --reload
-               echo "端口 $HTTP_PORT, $HTTPS_PORT 已允许通过 firewalld。"
-            elif command -v iptables >/dev/null 2>&1; then
-               echo "检测到 iptables 防火墙，正在为 HTTP 和 HTTPS 端口添加允许规则..."
-               sudo iptables -A INPUT -p tcp --dport $HTTP_PORT -j ACCEPT
-               sudo iptables -A INPUT -p tcp --dport $HTTPS_PORT -j ACCEPT
-               sudo iptables-save
-               echo "端口 $HTTP_PORT, $HTTPS_PORT 已允许通过 iptables。"
-            else
-               echo "未检测到已知的防火墙类型，无法自动放通端口。"
-            fi
-            break
-            ;;
-        [Nn]* )
-            echo "未安装 webmin nginx 和 webmin nginx-ssl 插件"
+            echo "cockpit 未安装。"
             break
             ;;
         * )
@@ -305,7 +265,7 @@ while true; do
 done
 
 # ==========================
-# 10. vim 配置
+# 9. vim 配置
 # ==========================
 wget -O /root/.vimrc https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/debian/.vimrc
 
