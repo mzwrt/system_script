@@ -88,7 +88,9 @@ apt install vim curl wget ufw sudo lsof htop -y
 
 # 设置语言为中文简体
 echo "正在设置系统语言为中文简体..."
-update-locale LANG=zh_CN.UTF-8
+sed -i '/zh_CN.UTF-8 UTF-8/s/^# //g' /etc/locale.gen
+locale-gen
+update-locale LANG=zh_CN.UTF-8 LANGUAGE=zh_CN:zh
 
 # 设置时区为中国
 echo "正在设置时区为中国..."
