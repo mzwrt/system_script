@@ -283,4 +283,4 @@ echo "已为用户 $NEW_USER 配置了 sudo 权限和 sudo 免密码登陆权限
 echo "防火墙已配置，端口 $SSH_PORT 已成功放通。"
 echo "如有需要，请重启 SSH 服务以确保配置生效。"
 echo "已经将vi 配置文件下载到/root/.vimrc如果不喜欢配置风格可以使用此命令删除：rm -f /root/.vimrc"
-echo "如果安装 webmin 请访问：https://你的IP:10000/"
+echo "如果安装 webmin 请访问：https://你的IP:9090/"
