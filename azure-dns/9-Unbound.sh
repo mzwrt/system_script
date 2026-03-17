@@ -1,29 +1,7 @@
-apt install -y unbound unbound-anchor dns-root-data
-
-# 停用 resolved
-systemctl disable --now systemd-resolved 2>/dev/null || true
-
-# 锁定 resolv.conf
-chattr -i /etc/resolv.conf 2>/dev/null; true
-cat > /etc/resolv.conf << 'EOF'
-nameserver 127.0.0.1
-options ndots:1 timeout:2 attempts:2
-EOF
-chattr +i /etc/resolv.conf
-
-# DNSSEC 根密钥
-unbound-anchor -a /var/lib/unbound/root.key -v
-chown unbound:unbound /var/lib/unbound/root.key
-chmod 640 /var/lib/unbound/root.key
-
-mkdir -p /var/log/unbound
-chown unbound:unbound /var/log/unbound
-chmod 750 /var/log/unbound
-
-cat > /etc/unbound/unbound.conf << 'UNBOUND_EOF'
 ###############################################################
 # Unbound — Standard_B2ats_v2 · 1GB RAM 严格版
 # 缓存总量控制在 120MB 以内，防止 OOM
+# 【注意：】 默认禁用 IPv6 网络
 ###############################################################
 
 server:
@@ -33,10 +11,11 @@ server:
     # interface: 172.16.1.x    # ← WireGuard IP（按实际填写）
     port: 53
     do-ip4: yes
-    do-ip6: yes
+    do-ip6: no
     do-udp: yes
     do-tcp: yes
     prefer-ip6: no
+    tls-cert-bundle: /etc/ssl/certs/ca-certificates.crt
 
     # ── 访问控制 ──────────────────────────────────────────
     access-control: 0.0.0.0/0 refuse
@@ -146,8 +125,8 @@ server:
     module-config: "validator iterator"
 
     # ── 日志（PCI-DSS 10.x）─────────────────────────────
-    use-syslog:          no
-    logfile:             "/var/log/unbound/unbound.log"
+    use-syslog: yes
+    logfile: ""
     log-time-ascii:      yes
     verbosity:           1
     log-queries:         yes
@@ -181,16 +160,3 @@ remote-control:
     control-cert-file: "/etc/unbound/unbound_control.pem"
 
 include-toplevel: "/etc/unbound/conf.d/*.conf"
-
-UNBOUND_EOF
-
-# 生成控制证书
-unbound-control-setup -d /etc/unbound
-
-# 语法检查
-unbound-checkconf /etc/unbound/unbound.conf
-
-# 启动
-systemctl enable --now unbound
-systemctl status unbound --no-pager
-echo "✓ Unbound 启动完成"
