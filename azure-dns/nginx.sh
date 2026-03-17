@@ -143,7 +143,7 @@ http {
         '$ssl_protocol/$ssl_cipher';
 
     # 访问日志（PCI-DSS 10.3 要求记录 IP、时间、操作、状态）
-    access_log /var/log/nginx/access.log main buffer=16k flush=5s;
+    access_log /opt/nginx/logs/nginx-access.log main buffer=16k flush=5s;
 
     ##############################################################
     ## TLS 全局设置（PCI-DSS 4.2.1 要求 TLS ≥ 1.2）
@@ -151,11 +151,7 @@ http {
     ssl_protocols              TLSv1.2 TLSv1.3;
     ssl_ecdh_curve X25519:secp384r1;
     ssl_prefer_server_ciphers  on;
-    ssl_ciphers
-        'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:'
-        'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:'
-        'ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:'
-        'DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384';
+    ssl_ciphers "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384";
 
     # DH 参数（PCI-DSS 要求 ≥ 2048 bit）
     # 若文件不存在则生成：openssl dhparam -out /opt/nginx/ssl/dhparam.pem 2048
@@ -226,6 +222,7 @@ http {
         listen [::]:443 ssl default_server;
         ssl_certificate     /opt/nginx/ssl/default/default.pem;
         ssl_certificate_key /opt/nginx/ssl/default/default.key;
+        ssl_stapling off;
         return 444;
     }
 
