@@ -149,6 +149,7 @@ http {
     ## TLS 全局设置（PCI-DSS 4.2.1 要求 TLS ≥ 1.2）
     ##############################################################
     ssl_protocols              TLSv1.2 TLSv1.3;
+    ssl_ecdh_curve X25519:secp384r1;
     ssl_prefer_server_ciphers  on;
     ssl_ciphers
         'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:'
@@ -157,11 +158,11 @@ http {
         'DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384';
 
     # DH 参数（PCI-DSS 要求 ≥ 2048 bit）
-    # 若文件不存在则生成：openssl dhparam -out /etc/nginx/dhparam.pem 2048
-    # ssl_dhparam /etc/nginx/dhparam.pem;
+    # 若文件不存在则生成：openssl dhparam -out /opt/nginx/ssl/dhparam.pem 2048
+    ssl_dhparam /opt/nginx/ssl/dhparam.pem;
 
     # Session 缓存（性能优化，减少 TLS 握手）
-    ssl_session_cache    shared:SSL:50m;
+    ssl_session_cache    shared:SSL:10m;
     ssl_session_timeout  1d;
     ssl_session_tickets  off;      # PCI-DSS 4.2.1
 
@@ -207,6 +208,7 @@ http {
     # 启用 ModSecurity
     ##############################################################
     modsecurity on;  # 启用 ModSecurity WAF
+    modsecurity_rules_file /opt/owasp/conf/main.conf;
 
 
     ##############################################################
