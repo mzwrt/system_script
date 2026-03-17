@@ -431,6 +431,7 @@ apt-get install -y \
     libcurl4-openssl-dev \
     libyaml-dev \
     unzip \
+    curl \
     git \
     cmake \
     gcc \
