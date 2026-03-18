@@ -50,6 +50,17 @@ TUNING_EOF
 
 chmod +x /usr/local/bin/network-tuning.sh
 
+# 查看当前队列深度
+ethtool -g eth0 2>/dev/null
+
+# 若支持，增大 RX/TX ring buffer
+ethtool -G eth0 rx 4096 tx 4096 2>/dev/null || \
+    echo "该网卡驱动不支持调整 ring buffer（Azure hv_netvsc 正常）"
+
+# 开启网卡 GRO/GSO（减少中断次数）
+ethtool -K eth0 gro on gso on tso on 2>/dev/null
+ethtool -K eth0 rx-checksumming on tx-checksumming on 2>/dev/null
+
 # ══ 同步修复 sysctl 配置（使用正确的参数名）══════════════
 # 把之前写错的 rfs_entries 改为正确名称
 sed -i 's/^net\.core\.rfs_entries.*/net.core.rps_sock_flow_entries = 16384/' \
