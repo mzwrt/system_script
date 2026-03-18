@@ -1,3 +1,13 @@
+apt update
+apt install -y unbound unbound-anchor dns-root-data \
+               libevent-2.1-7t64 libnghttp2-14 libhiredis-dev
+
+               
+# 先备份默认配置
+cp /etc/unbound/unbound.conf /etc/unbound/unbound.conf.bak
+
+cat > /etc/unbound/unbound.conf << 'UNBOUND_EOF'
+
 ###############################################################
 # Unbound — Standard_B2ats_v2 · 1GB RAM 严格版
 # 缓存总量控制在 120MB 以内，防止 OOM
@@ -160,3 +170,6 @@ remote-control:
     control-cert-file: "/etc/unbound/unbound_control.pem"
 
 include-toplevel: "/etc/unbound/conf.d/*.conf"
+UNBOUND_EOF
+
+echo "✓ unbound.conf 写入完成"
