@@ -241,12 +241,25 @@ cd ModSecurity || exit 1
 git submodule update --recursive
 git submodule init
 git submodule update
+# 2. 执行你的 Lua 路径修正
+sed -e 's/luajit-2.0/luajit-2.1/g' \
+    -e 's/LUA_POSSIBLE_LIB_NAMES="/LUA_POSSIBLE_LIB_NAMES="luajit /g' \
+    -i build/lua.m4
 # 配置 ModSecurity（禁用 jemalloc）
 # jemalloc 与 ModSecurity 不兼容
 # 所以添加 JEMALLOC_CFLAGS="" JEMALLOC_LIBS="" 和 --disable-shared 
 # 让 ModSecurity 变为静态模块
 ./build.sh
-./configure --with-pcre2
+./configure \
+    --prefix=/usr \
+    --with-lmdb \
+    --with-libxml \
+    --with-lua \
+    --with-pcre2 \
+    --with-ssdeep \
+    --disable-examples
+# 5. 注入链接优化
+sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
 make -j$(nproc) || make
 make install
 # 下载 modsecurity.conf 文件并备份旧文件（如果存在）
@@ -432,6 +445,8 @@ apt-get install -y \
     libyaml-dev \
     unzip \
     curl \
+    libfuzzy-dev \
+    libluajit-5.1-dev \
     git \
     cmake \
     gcc \
@@ -820,7 +835,7 @@ fi
 # 日志配置
 if [ ! -f "/etc/logrotate.d/nginx" ]; then
   wget -q --tries=5 --waitretry=2 --no-check-certificate -O "/etc/logrotate.d/nginx" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/nginx"
-  # 替换文件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
+  # 替换件内容中的 $NGINX_DIR（写成 \$NGINX_DIR）为实际路径
   sed -i "s|\\%NGINX_DIR%|$NGINX_DIR|g" "/etc/logrotate.d/nginx"
 fi
 
@@ -1250,7 +1265,7 @@ uninstall_nginx() {
     echo "########### 说明 #######################"
 
     echo "卸载时保留的文件夹：$NGINX_DIR/conf, $NGINX_DIR/conf.d, $NGINX_DIR/ssl, $OPT_DIR/owasp, $NGINX_DIR/logs"
-    echo "如需完全清除 Nginx，请运行：rm -rf $NGINX_DIR $OPT_DIR/owasp"
+    echo "需完全清除 Nginx，请运行：rm -rf $NGINX_DIR $OPT_DIR/owasp"
     echo "如需清除网站数据和删除网站根目录，请运行：rm -rf /www"
     echo "Nginx 卸载完成。"
     echo "######################################"
