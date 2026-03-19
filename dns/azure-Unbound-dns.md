@@ -86,7 +86,9 @@ apt install -y \
   iotop \
   tcpdump \
   jq \
-  bc
+  bc \
+  dnsutils \
+  unbound-host
 
 # 清理无用包
 apt autoremove -y && apt autoclean -y
