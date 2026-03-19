@@ -1040,8 +1040,7 @@ cat > /etc/audit/rules.d/cis-audit.rules << 'EOF'
 -a always,exit -F arch=b64 -S mount -F auid>=1000 -F auid!=-1 -k mounts
 
 # 文件删除（PCI-DSS 10.2.7）
--a always,exit -F arch=b64 -S unlink -S unlinkat -S rename -S renameat \
-  -F auid>=1000 -F auid!=-1 -k delete
+-a always,exit -F arch=b64 -S unlink -S unlinkat -S rename -S renameat -F auid>=1000 -F auid!=-1 -k delete
 
 # 权限修改
 -a always,exit -F arch=b64 -S chmod -S fchmod -S fchmodat -F auid>=1000 -F auid!=-1 -k perm-mod
@@ -1054,10 +1053,8 @@ cat > /etc/audit/rules.d/cis-audit.rules << 'EOF'
 -a always,exit -F arch=b64 -S setgid -S setregid -S setresgid -k setgid
 
 # 不成功的文件访问（PCI-DSS 10.2.4）
--a always,exit -F arch=b64 -S creat -S open -S openat -S truncate -S ftruncate \
-  -F exit=-EACCES -F auid>=1000 -F auid!=-1 -k access
--a always,exit -F arch=b64 -S creat -S open -S openat -S truncate -S ftruncate \
-  -F exit=-EPERM -F auid>=1000 -F auid!=-1 -k access
+-a always,exit -F arch=b64 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EACCES -F auid>=1000 -F auid!=-1 -k access
+-a always,exit -F arch=b64 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EPERM -F auid>=1000 -F auid!=-1 -k access
 
 # 锁定审计规则（防篡改，PCI-DSS 10.5）
 -e 2
