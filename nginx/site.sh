@@ -139,7 +139,7 @@ issue_cert_wildcard() {
     mkdir -p "$SSL_DIR"
 
     echo "📄 正在为根域名 $ROOT_DOMAIN 申请通配符证书..."
-    if ! acme.sh --issue -d "*.$ROOT_DOMAIN" -d "$ROOT_DOMAIN" --dns dns_"$SITE_PROVIDER" --keylength 2048; then
+    if ! acme.sh --issue -d "*.$ROOT_DOMAIN" -d "$ROOT_DOMAIN" --dns dns_"$SITE_PROVIDER" --keylength ec-256; then
         echo "❌ 证书申请失败：$ROOT_DOMAIN"
         acme.sh --remove -d "*.$ROOT_DOMAIN" -d "$ROOT_DOMAIN" 2>/dev/null || true
         return 1
