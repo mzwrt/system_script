@@ -87,11 +87,11 @@ setup_dns_api() {
         ali)
             if ! grep -q 'Ali_Key' "$SITE_ACME_ACCOUNT_CONF" 2>/dev/null; then
                 echo "首次使用阿里云 DNS，请输入 API 密钥"
-                read -r -p "请输入邮箱: " site_account_email
+                #read -r -p "请输入邮箱: " site_account_email
                 read -r -p "Ali_Key: " Ali_Key
                 read -r -p "Ali_Secret: " Ali_Secret
                 export Ali_Key Ali_Secret
-                acme.sh --register-account --accountemail "$site_account_email"
+                #acme.sh --register-account --accountemail "$site_account_email"
             else
                 echo "✅ 阿里云 DNS API 已配置"
             fi
@@ -99,11 +99,11 @@ setup_dns_api() {
         cf)
             if ! grep -q 'CF_Token' "$SITE_ACME_ACCOUNT_CONF" 2>/dev/null; then
                 echo "首次使用 Cloudflare DNS，请输入 API 密钥"
-                read -r -p "请输入邮箱: " site_account_email
+                #read -r -p "请输入邮箱: " site_account_email
                 read -r -p "CF_Token: " CF_Token
                 read -r -p "CF_Account: " CF_Account
                 export CF_Token CF_Account
-                acme.sh --register-account --accountemail "$site_account_email"
+                #acme.sh --register-account --accountemail "$site_account_email"
             else
                 echo "✅ Cloudflare DNS API 已配置"
             fi
