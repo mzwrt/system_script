@@ -51,7 +51,7 @@ install_xray() {
     # 日志配置
     if [ ! -f "/etc/logrotate.d/xray" ]; then
         wget -q -O "/etc/logrotate.d/xray" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/xray/xray"
-        sed -i "s|\\$USER|$XRAY_USER|g" "/etc/logrotate.d/xray"
+        sed -i "s|\$USER|$XRAY_USER|g" "/etc/logrotate.d/xray"
     fi
 
     # 设置权限
