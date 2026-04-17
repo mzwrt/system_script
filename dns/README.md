@@ -189,8 +189,6 @@ net.ipv4.tcp_syn_retries = 3
 net.ipv4.tcp_synack_retries = 3
 net.ipv4.tcp_max_syn_backlog = 4096
 
-# Nagle 算法（DNS 小包禁用延迟）
-net.ipv4.tcp_low_latency = 1
 
 # 窗口扩展（必须，跨海 BDP 补偿）
 net.ipv4.tcp_window_scaling = 1
@@ -198,7 +196,6 @@ net.ipv4.tcp_window_scaling = 1
 # SACK（丢包重传优化）
 net.ipv4.tcp_sack = 1
 net.ipv4.tcp_dsack = 1
-net.ipv4.tcp_fack = 0
 
 # MTU 探测（Azure 网络 MTU=1500）
 net.ipv4.tcp_mtu_probing = 1
@@ -217,8 +214,8 @@ net.ipv4.udp_wmem_min = 8192
 #==============================================================
 # 文件描述符限制（高并发 DNS）
 #==============================================================
-fs.file-max = 200000
-fs.nr_open = 200000
+fs.file-max = 1000000
+fs.nr_open = 1048576
 
 #==============================================================
 # 内存管理（1 GB 特别优化）
@@ -299,9 +296,6 @@ kernel.kptr_restrict = 2
 
 # 限制 ptrace（防提权）
 kernel.yama.ptrace_scope = 1
-
-# 禁止 SysRq（CIS 要求）
-kernel.sysrq = 0
 
 # 核心转储限制
 kernel.core_uses_pid = 1
