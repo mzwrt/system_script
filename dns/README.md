@@ -67,20 +67,14 @@ apt install -y \
   unbound-anchor \
   dns-root-data \
   dnsutils \
-  bind9-utils \
-  openssl \
   curl \
   wget \
-  net-tools \
   iproute2 \
-  iptables \
   fail2ban \
   logrotate \
-  chrony \
-  auditd \
+  systemd-timesyncd \
   libpam-pwquality \
   acl \
-  aide \
   rkhunter \
   htop \
   iotop \
@@ -97,34 +91,20 @@ apt autoremove -y && apt autoclean -y
 ### 1.3 时间同步（PCI-DSS 10.6 要求）
 
 ```bash
-# 配置 Chrony 时间同步（日本NTP服务器）
-cat > /etc/chrony/chrony.conf << 'EOF'
-# 日本 NTP 服务器（低延迟）
-server ntp.nict.jp iburst prefer
-server time.cloudflare.com iburst
-server 0.asia.pool.ntp.org iburst
-server 1.asia.pool.ntp.org iburst
+# 配置 systemd-timesyncd 时间同步（日本NTP服务器）
+{
+   a_settings=("NTP=time.nist.gov" "FallbackNTP=time-a-g.nist.gov time-b-g.nist.gov time-c-g.nist.gov")
+   [ ! -d /etc/systemd/timesyncd.conf.d/ ] && mkdir /etc/systemd/timesyncd.conf.d/
+   if grep -Psq -- '^\h*\[Time\]' /etc/systemd/timesyncd.conf.d/60-timesyncd.conf; then
+      printf '%s\n' "" "${a_settings[@]}" >> /etc/systemd/timesyncd.conf.d/60-timesyncd.conf
+   else
+      printf '%s\n' "" "[Time]" "${a_settings[@]}" >> /etc/systemd/timesyncd.conf.d/60-timesyncd.conf
+   fi
+}
 
-# 允许大偏差时首次同步
-makestep 1.0 3
+systemctl reload systemd-timesyncd
+systemctl restart systemd-timesyncd
 
-# 硬件时间戳（如支持）
-rtcsync
-
-# 日志
-logdir /var/log/chrony
-log tracking measurements statistics
-
-# 安全：不充当 NTP 服务器
-port 0
-EOF
-
-systemctl enable chrony
-systemctl restart chrony
-
-# 验证同步
-chronyc tracking
-chronyc sources -v
 ```
 
 ---
