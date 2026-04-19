@@ -35,7 +35,7 @@ USE_ngx_http_headers_more_filter_module=true
 
 # ngx_http_proxy_connect_module 模块
 # 设置为 false 即不启用
-USE_ngx_http_proxy_connect_module=true
+USE_ngx_http_proxy_connect_module=false
 
 # ngx_brotli 模块
 # 设置为 false 即不启用
