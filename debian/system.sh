@@ -65,7 +65,7 @@ done
 # ==========================
 
 echo "正在从指定链接下载新的 sysctl.conf 文件..."
-wget -O /etc/sysctl.d/99-custom.conf https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/debian/system/sysctl.conf
+wget -O /etc/sysctl.d/90-custom.conf https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/debian/system/sysctl.conf
 
 # 加载新的 sysctl 配置
 echo "正在应用新的 sysctl 配置..."
