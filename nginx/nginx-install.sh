@@ -61,7 +61,7 @@ USE_modsecurity_nginx=true
 # 获取最新 OpenSSL 稳定版版本
 #OPENSSL_VERSION=$(wget -qO- --tries=5 --waitretry=2 --no-check-certificate https://www.openssl.org/source/ | grep -oP 'openssl-\d+\.\d+\.\d+' | head -1 | sed 's/openssl-//')
 # 手动指定版本号
-OPENSSL_VERSION=3.5.5
+OPENSSL_VERSION=3.5.6
 
 # 手动指定 NGINX 版本
 # NGINX_VERSION=1.28.1
