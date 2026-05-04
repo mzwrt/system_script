@@ -238,7 +238,8 @@ cd $NGINX_SRC_DIR || exit 1
 
 git clone --depth 1 -b v3/master --single-branch https://github.com/SpiderLabs/ModSecurity ModSecurity
 cd ModSecurity || exit 1
-git submodule update --recursive
+#git submodule update --recursive
+git submodule update --init --recursive
 git submodule init
 git submodule update
 # 2. 执行你的 Lua 路径修正
