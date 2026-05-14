@@ -16,6 +16,9 @@ OPT_DIR="/opt"
 NGINX_DIR="$OPT_DIR/nginx"  # 安装目录
 NGINX_SRC_DIR="$OPT_DIR/nginx/src"   # 源代码和模块的存放目录
 
+# 正则表达式替换模块
+USE_ngx_http_substitutions_filter_module=false
+
 
 # ngx-fancyindex 模块
 # 设置为 false 即不启用
@@ -77,6 +80,16 @@ if [ ! -d "$NGINX_SRC_DIR" ]; then
     chmod 750 "$NGINX_SRC_DIR"
     chown -R root:root "$NGINX_SRC_DIR"
 fi
+
+ngx_http_substitutions_filter_module_install() {
+  cd "$NGINX_SRC_DIR" || exit 1
+  if [ -d "ngx_http_substitutions_filter_module" ]; then
+    echo "ngx_http_substitutions_filter_module 已存在，跳过下载。"
+    return
+  fi
+  git clone --depth 1 https://github.com/yaoweibin/ngx_http_substitutions_filter_module.git \
+    "$NGINX_SRC_DIR/ngx_http_substitutions_filter_module"
+}
 
 ngx_fancyindex_install() {
 # 获取 ngx-fancyindex- 最新稳定版版本号
@@ -602,6 +615,16 @@ else
     ngx_fancyindex_CONFIG=""
 fi
 
+# ngx_http_substitutions_filter_module 模块控制
+if [ "$USE_ngx_http_substitutions_filter_module" == "true" ]; then
+    echo "正在安装 ngx_http_substitutions_filter_module..."
+    ngx_http_substitutions_filter_module_install
+    ngx_http_substitutions_filter_module_CONFIG="--add-module=$NGINX_SRC_DIR/ngx_http_substitutions_filter_module"
+else
+    echo "跳过 ngx_http_substitutions_filter_module 安装..."
+    ngx_http_substitutions_filter_module_CONFIG=""
+fi
+
 # openssl 模块控制
 if [ "$USE_openssl" == "true" ]; then
     echo "正在安装 openssl..."
@@ -682,6 +705,7 @@ cd $NGINX_DIR/nginx || exit 1
   $modsecurity_nginx_CONFIG \
   $openssl_CONFIG \
   $PCRE2_CONFIG \
+  $ngx_http_substitutions_filter_module_CONFIG \
   $ngx_fancyindex_CONFIG
 
 # 编译 Nginx
@@ -1078,6 +1102,16 @@ else
     ngx_fancyindex_CONFIG=""
 fi
 
+# ngx_http_substitutions_filter_module 模块控制
+if [ "$USE_ngx_http_substitutions_filter_module" == "true" ]; then
+    echo "正在安装 ngx_http_substitutions_filter_module..."
+    ngx_http_substitutions_filter_module_install
+    ngx_http_substitutions_filter_module_CONFIG="--add-module=$NGINX_SRC_DIR/ngx_http_substitutions_filter_module"
+else
+    echo "跳过 ngx_http_substitutions_filter_module 安装..."
+    ngx_http_substitutions_filter_module_CONFIG=""
+fi
+
 # openssl 模块控制
 if [ "$USE_openssl" == "true" ]; then
     echo "正在安装 openssl..."
@@ -1157,6 +1191,7 @@ cd $NGINX_DIR/nginx || exit 1
   $modsecurity_nginx_CONFIG \
   $openssl_CONFIG \
   $PCRE2_CONFIG \
+  $ngx_http_substitutions_filter_module_CONFIG \
   $ngx_fancyindex_CONFIG
 
 # 编译 Nginx
