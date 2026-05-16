@@ -224,6 +224,21 @@ mkdir -p "$SITE_DIR/logs/uwsgi_temp" \
              "$SITE_DIR/logs/modsec_data" \
              "$SITE_CONF_DIR" "$SITE_ENABLED_DIR" "$SITE_SSL_BASE_DIR"
 
+# 1. 强行创建专门收拢在 logs 下的 Modsec 读写特区
+mkdir -p /opt/nginx/logs/modsec_tmp /opt/nginx/logs/modsec_data
+touch /opt/nginx/logs/modsec_audit.log /opt/nginx/logs/modsec_debug.log
+
+# 2. 批量微雕读写特区的权限，确保 www-data 组有权写入，root 拥有所有权
+chown -R root:www-data /opt/nginx/logs/modsec_tmp /opt/nginx/logs/modsec_data
+chmod -R 770 /opt/nginx/logs/modsec_tmp /opt/nginx/logs/modsec_data
+chown root:www-data /opt/nginx/logs/modsec_audit.log /opt/nginx/logs/modsec_debug.log
+chmod 660 /opt/nginx/logs/modsec_audit.log /opt/nginx/logs/modsec_debug.log
+
+# 3. 规范你的规则库只读权限（防止被木马篡改）
+chown -R root:www-data /opt/owasp/ /opt/nginx/src/ModSecurity/
+find /opt/owasp/ -type d -exec chmod 750 {} \;
+find /opt/owasp/ -type f -exec chmod 640 {} \;
+
 # 2. 允许 nginx 用户和组穿透 /opt 和 /opt/nginx 顶级目录
 chmod g+x "$SITE_OPT"
 chmod g+x "$SITE_DIR"
