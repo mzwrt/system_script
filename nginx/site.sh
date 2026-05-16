@@ -268,17 +268,17 @@ mkdir -p "$SITE_NGINX_ROOT_DIR"
 
 # 解压并利用 --strip-components=1 直接把解压出的 wordpress 文件夹内部文件
 # 释放到 $SITE_NGINX_ROOT_DIR 正下方，而不是多套一层名为 "wordpress" 的外壳
-tar -zxf /tmp/wordpress.tar.gz -C "$SITE_NGINX_ROOT_DIR" --strip-components=1
+tar -zxf /tmp/wordpress.tar.gz -C "$WEB_ROOT" --strip-components=1
 
 # 清理临时下载包
 rm -f /tmp/wordpress.tar.gz
 
 # 【关键追加】：精准放行 WP 媒体上传和多媒体目录，允许 www-data(PHP-FPM) 写入
 # 如果你的 WordPress 下面有特殊的缓存目录（如 wp-content/cache），也按此法处理
-if [ -d "$SITE_NGINX_ROOT_DIR/wp-content" ]; then
-    chown -R "$SITE_NGINX_USER":"$SITE_NGINX_GROUP" "$SITE_NGINX_ROOT_DIR/wp-content"
-    find "$SITE_NGINX_ROOT_DIR/wp-content" -type d -exec chmod 775 {} \;
-    find "$SITE_NGINX_ROOT_DIR/wp-content" -type f -exec chmod 664 {} \;
+if [ -d "$WEB_ROOT/wp-content" ]; then
+    chown -R "$SITE_NGINX_USER":"$SITE_NGINX_GROUP" "$WEB_ROOT/wp-content"
+    find "$WEB_ROOT/wp-content" -type d -exec chmod 775 {} \;
+    find "$WEB_ROOT/wp-content" -type f -exec chmod 664 {} \;
 fi
 
 
