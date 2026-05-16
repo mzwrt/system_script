@@ -65,7 +65,8 @@ PrivateDevices=true
 RestrictDevices=yes
 
 # 防止服务分配可执行内存
-MemoryDenyWriteExecute=true
+# MemoryDenyWriteExecute 与 --with-pcre-jit编译参数冲突
+#MemoryDenyWriteExecute=true
 # 防止进程更改执行平台（如 32/64位模式切换）
 LockPersonality=true
 # 防止创建新用户/网络/mount 等 namespace，减少逃逸攻击面
