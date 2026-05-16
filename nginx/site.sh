@@ -14,6 +14,8 @@ SITE_TEMPLATE_URL="https://raw.githubusercontent.com/mzwrt/system_script/refs/he
 
 SITE_NGINX_USER="www-data"
 SITE_NGINX_GROUP="www-data"
+SITE_NGINX_ROOT="/www"
+SITE_NGINX_ROOT_DIR="/www/wwwroot"
 SITE_ACME_ACCOUNT_CONF="/root/.acme.sh/account.conf"
 
 # ----------------------------
@@ -183,7 +185,7 @@ create_site() {
         DOMAIN="${DOMAIN// /}"
         validate_site_domain "$DOMAIN" || { echo "❌ 域名不合法：$DOMAIN"; continue; }
 
-        local WEB_ROOT="/www/wwwroot/$DOMAIN"
+        local WEB_ROOT="$SITE_NGINX_ROOT_DIR/$DOMAIN"
         local CONF_FILE="$SITE_CONF_DIR/$DOMAIN.conf"
 
         mkdir -p "$WEB_ROOT"
@@ -210,24 +212,37 @@ create_site() {
 ## 因为前面文件权限配置错误，这里修正权限，
 # 1. 允许 nginx 用户和组穿透 /opt 和 /opt/nginx 顶级目录
 # (+x 意味着允许进程“走过去”，但不能查看里面的列表，确保了顶级目录的安全)
-chmod g+x /opt
-chmod g+x /opt/nginx
+chmod g+x "$SITE_OPT"
+chmod g+x "$SITE_DIR"
 
 # 2. 将配置目录和证书目录的【属组】强行修改为 www-data 组
-chown -R root:www-data /opt/nginx/conf
-chown -R root:www-data /opt/nginx/conf.d
-chown -R root:www-data /opt/nginx/ssl
+chown -R root:"$SITE_NGINX_GROUP" "$SITE_DIR/conf"
+chown -R root:"$SITE_NGINX_GROUP" "$SITE_DIR/conf.d"
+chown -R root:"$SITE_NGINX_GROUP" "$SITE_DIR/ssl"
 
 # 3. 严格规范目录权限（750：root可读写执行，www-data组可读可穿透，其他人毫无权限）
-find /opt/nginx/conf -type d -exec chmod 750 {} \;
-find /opt/nginx/conf.d -type d -exec chmod 750 {} \;
-find /opt/nginx/ssl -type d -exec chmod 750 {} \;
+find "$SITE_DIR/conf" -type d -exec chmod 750 {} \;
+find "$SITE_DIR/conf.d" -type d -exec chmod 750 {} \;
+find "$SITE_DIR/ssl" -type d -exec chmod 750 {} \;
 
 # 4. 严格规范文件权限（640：root可读写，www-data组只读，其他人毫无权限）
 # 这样 Nginx 工作进程就能名正言顺地读取 .conf 和 SSL 证书私钥了
-find /opt/nginx/conf -type f -exec chmod 640 {} \;
-find /opt/nginx/conf.d -type f -exec chmod 640 {} \;
-find /opt/nginx/ssl -type f -exec chmod 640 {} \;
+find "$SITE_DIR/conf" -type f -exec chmod 640 {} \;
+find "$SITE_DIR/conf.d" -type f -exec chmod 640 {} \;
+find "$SITE_DIR/ssl" -type f -exec chmod 640 {} \;
+
+# 1. 允许 Nginx 进程穿透 /www 目录，以便进入 /www/wwwroot
+chmod g+x "$SITE_NGINX_ROOT"
+
+# 2. 将网站根目录的属组变更为 nginx 组，并规范权限（目录750，文件640）
+# 这可以保证 Nginx 能够完美读取 WordPress 的静态资源，同时由于沙盒限制，它绝对无法篡改源码
+chown -R root:"$SITE_NGINX_GROUP" "$SITE_NGINX_ROOT_DIR"
+find "$SITE_NGINX_ROOT_DIR" -type d -exec chmod 750 {} \;
+find "$SITE_NGINX_ROOT_DIR" -type f -exec chmod 640 {} \;
+
+# 3. 必须确保 /opt/nginx/logs 目录允许 nginx 用户组写入（因为缓存和日志全在里面）
+chown -R root:"$SITE_NGINX_GROUP" "$SITE_DIR/logs"
+chmod 770 "$SITE_DIR/logs"
 
         # 申请通配符证书
         issue_cert_wildcard "$DOMAIN" || echo "⚠️ $DOMAIN 证书申请失败，可重试"
@@ -248,7 +263,7 @@ delete_site() {
         rm -f "$SITE_ENABLED_DIR/$DOMAIN.conf"
 
         read -p "删除网站目录 $DOMAIN？(y/n): " a
-        [[ "$a" =~ ^[Yy]$ ]] && rm -rf "/www/wwwroot/$DOMAIN"
+        [[ "$a" =~ ^[Yy]$ ]] && rm -rf "$SITE_NGINX_ROOT_DIR/$DOMAIN"
 
         read -p "删除配置文件 $DOMAIN？(y/n): " b
         [[ "$b" =~ ^[Yy]$ ]] && rm -f "$SITE_CONF_DIR/$DOMAIN.conf"
@@ -258,7 +273,7 @@ delete_site() {
 
         # 检查是否还有其他域名（顶级或二级）使用该根域名证书
         local REMAINING=0
-        for d in /www/wwwroot/*; do
+        for d in $SITE_NGINX_ROOT_DIR/*; do
             [[ -d "$d" ]] || continue
             local DN
             DN=$(basename "$d")
