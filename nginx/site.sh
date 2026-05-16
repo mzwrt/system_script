@@ -207,6 +207,27 @@ create_site() {
             -e "s|%SSL_DIR%|$SITE_SSL_BASE_DIR/$(get_root_domain $DOMAIN)|g" \
             -e "s|%SITE_OPT%|$SITE_OPT|g" \
             "$CONF_FILE"
+## 因为前面文件权限配置错误，这里修正权限，
+# 1. 允许 nginx 用户和组穿透 /opt 和 /opt/nginx 顶级目录
+# (+x 意味着允许进程“走过去”，但不能查看里面的列表，确保了顶级目录的安全)
+chmod g+x /opt
+chmod g+x /opt/nginx
+
+# 2. 将配置目录和证书目录的【属组】强行修改为 www-data 组
+chown -R root:www-data /opt/nginx/conf
+chown -R root:www-data /opt/nginx/conf.d
+chown -R root:www-data /opt/nginx/ssl
+
+# 3. 严格规范目录权限（750：root可读写执行，www-data组可读可穿透，其他人毫无权限）
+find /opt/nginx/conf -type d -exec chmod 750 {} \;
+find /opt/nginx/conf.d -type d -exec chmod 750 {} \;
+find /opt/nginx/ssl -type d -exec chmod 750 {} \;
+
+# 4. 严格规范文件权限（640：root可读写，www-data组只读，其他人毫无权限）
+# 这样 Nginx 工作进程就能名正言顺地读取 .conf 和 SSL 证书私钥了
+find /opt/nginx/conf -type f -exec chmod 640 {} \;
+find /opt/nginx/conf.d -type f -exec chmod 640 {} \;
+find /opt/nginx/ssl -type f -exec chmod 640 {} \;
 
         # 申请通配符证书
         issue_cert_wildcard "$DOMAIN" || echo "⚠️ $DOMAIN 证书申请失败，可重试"
