@@ -239,6 +239,10 @@ chown -R root:www-data /opt/owasp/ /opt/nginx/src/ModSecurity/
 find /opt/owasp/ -type d -exec chmod 750 {} \;
 find /opt/owasp/ -type f -exec chmod 640 {} \;
 
+# 精准锁定这三个核心动态库文件的属组为 www-data，并赋予 640 只读权限
+chown root:www-data /usr/lib/libmodsecurity.so*
+chmod 640 /usr/lib/libmodsecurity.so*
+
 # 2. 允许 nginx 用户和组穿透 /opt 和 /opt/nginx 顶级目录
 chmod g+x "$SITE_OPT"
 chmod g+x "$SITE_DIR"
