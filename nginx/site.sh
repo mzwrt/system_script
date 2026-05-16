@@ -53,7 +53,8 @@ generate_dhparam() {
         mkdir -p "$(dirname "$SITE_DHPARAM_FILE")"
         echo "正在生成 DH 参数，可能需要几分钟..."
         openssl dhparam -out "$SITE_DHPARAM_FILE" 2048 >/dev/null 2>&1
-        chmod 400 "$SITE_DHPARAM_FILE"
+        chmod 640 "$SITE_DHPARAM_FILE"
+        chown root:www-data "$SITE_DHPARAM_FILE"
         echo "✅ DH 参数生成完成：$SITE_DHPARAM_FILE"
     fi
 }
@@ -151,7 +152,7 @@ issue_cert_wildcard() {
         --ca-file "$SSL_DIR/ca.pem" \
         --reloadcmd "systemctl reload nginx"
 
-    find "$SSL_DIR" -type f -exec chmod 600 {} \;
+    find "$SSL_DIR" -type f -exec chmod 640 {} \;
 
     CERT_APPLIED["$ROOT_DOMAIN"]=1
     echo "✅ 通配符证书申请完成：$ROOT_DOMAIN"
@@ -188,12 +189,14 @@ create_site() {
         mkdir -p "$WEB_ROOT"
         chown -R "$SITE_NGINX_USER:$SITE_NGINX_GROUP" "$WEB_ROOT"
         mkdir -p "$SITE_CONF_DIR" "$SITE_ENABLED_DIR" "$SITE_SSL_BASE_DIR"
-        chmod 700 "$SITE_SSL_BASE_DIR"
+        chmod 750 "$SITE_SSL_BASE_DIR"
+        chown -R root:$SITE_NGINX_GROUP "$SITE_SSL_BASE_DIR"
+        
 
         # 下载模板
         if [ ! -f "$CONF_FILE" ]; then
             curl -fsSL "$SITE_TEMPLATE_URL" -o "$CONF_FILE"
-            chmod 600 "$CONF_FILE"
+            chmod 640 "$CONF_FILE"
             ln -sf "$CONF_FILE" "$SITE_ENABLED_DIR/"
         fi
 
