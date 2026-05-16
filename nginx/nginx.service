@@ -49,7 +49,16 @@ RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 SystemCallFilter=~@debug @mount @reboot @swap @module @raw-io @obsolete @cpu-emulation @clock @sysctl
 
 # 只读挂载 nginx 配置路径
-ReadOnlyPaths=%NGINX_DIR%
+ReadOnlyPaths=/usr/local/bin/nginx \
+              %NGINX_DIR%/conf \
+              %NGINX_DIR%/conf.d \
+              %NGINX_DIR%/ssl \
+              /www/wwwroot \
+              /usr/share \
+              /usr/local/modsecurity \
+              /opt/owasp/conf \
+              /opt/owasp/owasp-rules \
+              %NGINX_DIR%/src/ModSecurity
 # 仅允许日志路径写入
 ReadWritePaths=%NGINX_DIR%/logs
 # 禁止访问这些路径
