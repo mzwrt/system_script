@@ -50,15 +50,20 @@ SystemCallFilter=~@debug @mount @reboot @swap @module @raw-io @obsolete @cpu-emu
 
 # 只读挂载 nginx 配置路径
 ReadOnlyPaths=/usr/local/bin/nginx \
-              %NGINX_DIR%/conf \
-              %NGINX_DIR%/conf.d \
-              %NGINX_DIR%/ssl \
+              /opt/nginx/conf \
+              /opt/nginx/conf.d \
+              /opt/nginx/modules \
+              /opt/nginx/ssl \
               /www/wwwroot \
               /usr/share \
-              /usr/lib/ \
               /opt/owasp/conf \
               /opt/owasp/owasp-rules \
-              %NGINX_DIR%/src/ModSecurity
+              /opt/nginx/src/ModSecurity \
+              /usr/lib/libmodsecurity.so \
+              /usr/lib/libmodsecurity.so.3 \
+              /usr/lib/libmodsecurity.so.3.0.15 \
+              /lib/x86_64-linux-gnu \
+              /usr/lib/x86_64-linux-gnu
 # 仅允许日志路径写入
 ReadWritePaths=%NGINX_DIR%/logs
 # 禁止访问这些路径
