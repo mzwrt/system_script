@@ -1261,7 +1261,7 @@ uninstall_nginx() {
         fi
 
         # 删除可能存在的服务文件
-        [ -d "/usr/local/modsecurity" ] && rm -rf "/etc/systemd/system/nginx.service /lib/systemd/system/nginx.service"
+        [ -d "/etc/systemd/system/nginx.service" ] && rm -rf "/etc/systemd/system/nginx.service /lib/systemd/system/nginx.service"
 
         # 刷新 systemd 状态
         systemctl daemon-reexec
