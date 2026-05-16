@@ -220,6 +220,8 @@ mkdir -p "$SITE_DIR/logs/uwsgi_temp" \
              "$SITE_DIR/logs/nginx-fastcgi-cache" \
              "$SITE_DIR/logs/proxy_temp_dir" \
              "$SITE_DIR/logs/proxy_cache_dir" \
+             "$SITE_DIR/logs/modsec_tmp" \
+             "$SITE_DIR/logs/modsec_data" \
              "$SITE_CONF_DIR" "$SITE_ENABLED_DIR" "$SITE_SSL_BASE_DIR"
 
 # 2. 允许 nginx 用户和组穿透 /opt 和 /opt/nginx 顶级目录
