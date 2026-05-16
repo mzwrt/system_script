@@ -229,7 +229,7 @@ chmod g+x "$SITE_DIR"
 # 3. 将配置目录和证书目录的【属组】强行修改为 www-data 组
 chown -R root:"$SITE_NGINX_GROUP" "$SITE_DIR/conf"
 chown -R root:"$SITE_NGINX_GROUP" "$SITE_DIR/conf.d"
-chown -R root:"$SITE_DIR/ssl"  # 证书上级目录建议保持 root 拥有
+chown -R root:"$SITE_NGINX_GROUP" "$SITE_DIR/ssl"  # 证书上级目录建议保持 root 拥有
 
 # 特别注意：将证书私钥所在目录属组变更为 www-data，以便 Nginx 工作进程读取
 chown -R root:"$SITE_NGINX_GROUP" "$SITE_SSL_BASE_DIR"
