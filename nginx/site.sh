@@ -262,9 +262,9 @@ echo "正在下载最新的 WordPress 官方源码..."
 # 下载最新的 WordPress 压缩包，存放到 /tmp 目录
 curl -o /tmp/wordpress.tar.gz https://wordpress.org/latest.tar.gz
 
-echo "正在解压并部署到网站根目录: $SITE_NGINX_ROOT_DIR"
+echo "正在解压并部署到网站根目录: $WEB_ROOT"
 # 创建根目录（如果不存在）
-mkdir -p "$SITE_NGINX_ROOT_DIR"
+mkdir -p "$WEB_ROOT"
 
 # 解压并利用 --strip-components=1 直接把解压出的 wordpress 文件夹内部文件
 # 释放到 $SITE_NGINX_ROOT_DIR 正下方，而不是多套一层名为 "wordpress" 的外壳
