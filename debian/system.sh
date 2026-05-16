@@ -226,9 +226,9 @@ EOF
 
             apt update
             apt install -t ${VERSION_CODENAME}-backports cockpit -y
-            wget -q https://github.com/45Drives/cockpit-navigator/releases/download/v0.6.0/cockpit-navigator_0.6.0-1focal_all.deb
-            apt install ./cockpit-navigator_0.6.0-1focal_all.deb -y
-            rm -f cockpit-navigator_0.6.0-1focal_all.deb
+            wget -q https://github.com/45Drives/cockpit-navigator/releases/download/v0.5.10/cockpit-navigator_0.5.10-1focal_all.deb
+            apt install ./cockpit-navigator_0.5.10-1focal_all.deb -y
+            rm -f cockpit-navigator_0.5.10-1focal_all.deb
 
             COCKPIT_PORT=9090
 
