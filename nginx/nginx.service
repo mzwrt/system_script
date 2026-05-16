@@ -55,7 +55,7 @@ ReadOnlyPaths=/usr/local/bin/nginx \
               %NGINX_DIR%/ssl \
               /www/wwwroot \
               /usr/share \
-              /usr/local/modsecurity \
+              /usr/lib/ \
               /opt/owasp/conf \
               /opt/owasp/owasp-rules \
               %NGINX_DIR%/src/ModSecurity
