@@ -209,40 +209,83 @@ create_site() {
             -e "s|%SSL_DIR%|$SITE_SSL_BASE_DIR/$(get_root_domain $DOMAIN)|g" \
             -e "s|%SITE_OPT%|$SITE_OPT|g" \
             "$CONF_FILE"
+
+            
 ## 因为前面文件权限配置错误，这里修正权限，
-# 1. 允许 nginx 用户和组穿透 /opt 和 /opt/nginx 顶级目录
-# (+x 意味着允许进程“走过去”，但不能查看里面的列表，确保了顶级目录的安全)
+## 1. 修正路径笔误：精准在 /opt/nginx/logs 内部创建 7 个缓存和临时目录
+mkdir -p "$SITE_DIR/logs/uwsgi_temp" \
+             "$SITE_DIR/logs/client_body_temp" \
+             "$SITE_DIR/logs/scgi_temp" \
+             "$SITE_DIR/logs/fastcgi_temp" \
+             "$SITE_DIR/logs/nginx-fastcgi-cache" \
+             "$SITE_DIR/logs/proxy_temp_dir" \
+             "$SITE_DIR/logs/proxy_cache_dir" \
+             "$SITE_CONF_DIR" "$SITE_ENABLED_DIR" "$SITE_SSL_BASE_DIR"
+
+# 2. 允许 nginx 用户和组穿透 /opt 和 /opt/nginx 顶级目录
 chmod g+x "$SITE_OPT"
 chmod g+x "$SITE_DIR"
 
-# 2. 将配置目录和证书目录的【属组】强行修改为 www-data 组
+# 3. 将配置目录和证书目录的【属组】强行修改为 www-data 组
 chown -R root:"$SITE_NGINX_GROUP" "$SITE_DIR/conf"
 chown -R root:"$SITE_NGINX_GROUP" "$SITE_DIR/conf.d"
-chown -R root:"$SITE_NGINX_GROUP" "$SITE_DIR/ssl"
+chown -R root:"$SITE_DIR/ssl"  # 证书上级目录建议保持 root 拥有
 
-# 3. 严格规范目录权限（750：root可读写执行，www-data组可读可穿透，其他人毫无权限）
+# 特别注意：将证书私钥所在目录属组变更为 www-data，以便 Nginx 工作进程读取
+chown -R root:"$SITE_NGINX_GROUP" "$SITE_SSL_BASE_DIR"
+
+# 4. 严格规范 Nginx 配置与证书目录权限（750）与文件权限（640）
 find "$SITE_DIR/conf" -type d -exec chmod 750 {} \;
-find "$SITE_DIR/conf.d" -type d -exec chmod 750 {} \;
-find "$SITE_DIR/ssl" -type d -exec chmod 750 {} \;
-
-# 4. 严格规范文件权限（640：root可读写，www-data组只读，其他人毫无权限）
-# 这样 Nginx 工作进程就能名正言顺地读取 .conf 和 SSL 证书私钥了
 find "$SITE_DIR/conf" -type f -exec chmod 640 {} \;
-find "$SITE_DIR/conf.d" -type f -exec chmod 640 {} \;
-find "$SITE_DIR/ssl" -type f -exec chmod 640 {} \;
 
-# 1. 允许 Nginx 进程穿透 /www 目录，以便进入 /www/wwwroot
+find "$SITE_DIR/conf.d" -type d -exec chmod 750 {} \;
+find "$SITE_DIR/conf.d" -type f -exec chmod 640 {} \;
+
+find "$SITE_SSL_BASE_DIR" -type d -exec chmod 750 {} \;
+find "$SITE_SSL_BASE_DIR" -type f -exec chmod 640 {} \;
+
+
+# 5. 允许 Nginx 进程穿透 /www 顶级目录
 chmod g+x "$SITE_NGINX_ROOT"
 
-# 2. 将网站根目录的属组变更为 nginx 组，并规范权限（目录750，文件640）
-# 这可以保证 Nginx 能够完美读取 WordPress 的静态资源，同时由于沙盒限制，它绝对无法篡改源码
+# 6. 将网站根目录的属组变更为 www-data 组
 chown -R root:"$SITE_NGINX_GROUP" "$SITE_NGINX_ROOT_DIR"
+
+# 先全盘应用 750 / 640 严苛只读权限，锁死 WordPress 核心源码阻止木马篡改
 find "$SITE_NGINX_ROOT_DIR" -type d -exec chmod 750 {} \;
 find "$SITE_NGINX_ROOT_DIR" -type f -exec chmod 640 {} \;
 
-# 3. 必须确保 /opt/nginx/logs 目录允许 nginx 用户组写入（因为缓存和日志全在里面）
+# =======================================================================
+# 1. 自动化下载与解压 WordPress（直接注入到你的变量路径）
+# =======================================================================
+echo "正在下载最新的 WordPress 官方源码..."
+# 下载最新的 WordPress 压缩包，存放到 /tmp 目录
+curl -o /tmp/wordpress.tar.gz https://wordpress.org/latest.tar.gz
+
+echo "正在解压并部署到网站根目录: $SITE_NGINX_ROOT_DIR"
+# 创建根目录（如果不存在）
+mkdir -p "$SITE_NGINX_ROOT_DIR"
+
+# 解压并利用 --strip-components=1 直接把解压出的 wordpress 文件夹内部文件
+# 释放到 $SITE_NGINX_ROOT_DIR 正下方，而不是多套一层名为 "wordpress" 的外壳
+tar -zxf /tmp/wordpress.tar.gz -C "$SITE_NGINX_ROOT_DIR" --strip-components=1
+
+# 清理临时下载包
+rm -f /tmp/wordpress.tar.gz
+
+# 【关键追加】：精准放行 WP 媒体上传和多媒体目录，允许 www-data(PHP-FPM) 写入
+# 如果你的 WordPress 下面有特殊的缓存目录（如 wp-content/cache），也按此法处理
+if [ -d "$SITE_NGINX_ROOT_DIR/wp-content" ]; then
+    chown -R "$SITE_NGINX_USER":"$SITE_NGINX_GROUP" "$SITE_NGINX_ROOT_DIR/wp-content"
+    find "$SITE_NGINX_ROOT_DIR/wp-content" -type d -exec chmod 775 {} \;
+    find "$SITE_NGINX_ROOT_DIR/wp-content" -type f -exec chmod 664 {} \;
+fi
+
+
+# 7. 确保 /opt/nginx/logs 目录及其子缓存目录允许 www-data 组绝对读写（770）
 chown -R root:"$SITE_NGINX_GROUP" "$SITE_DIR/logs"
-chmod 770 "$SITE_DIR/logs"
+chmod -R 770 "$SITE_DIR/logs"
+
 
         # 申请通配符证书
         issue_cert_wildcard "$DOMAIN" || echo "⚠️ $DOMAIN 证书申请失败，可重试"
