@@ -92,7 +92,7 @@ ProcSubset=pid
 # 防止大规模的内存分配漏洞利用
 LimitMEMLOCK=infinity
 # 防止恶意进程占用过多的资源或发生拒绝服务攻击
-ResourceLimit=true
+#ResourceLimit=true
 
 
 
