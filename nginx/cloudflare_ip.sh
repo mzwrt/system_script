@@ -18,4 +18,4 @@ echo "real_ip_header CF-Connecting-IP;" >> "$CLOUDFLARE_IP_CONF_TMP"
 echo "#real_ip_header X-Forwarded-For;" >> "$CLOUDFLARE_IP_CONF_TMP"
 mv -f "$CLOUDFLARE_IP_CONF_TMP" "$CLOUDFLARE_IP_CONF"
 chmod 600 "$CLOUDFLARE_IP_CONF"
-systemctl restart nginx
+systemctl reload nginx
