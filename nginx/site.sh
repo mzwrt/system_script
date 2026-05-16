@@ -281,6 +281,8 @@ if [ -d "$WEB_ROOT/wp-content" ]; then
     find "$WEB_ROOT/wp-content" -type f -exec chmod 664 {} \;
 fi
 
+# 替换残留 NGINX 字段
+sed -i "s|nginx/\$nginx_version|CloudFlare|g" "$SITE_DIR/conf/fastcgi.conf"
 
 # 7. 确保 /opt/nginx/logs 目录及其子缓存目录允许 www-data 组绝对读写（770）
 chown -R root:"$SITE_NGINX_GROUP" "$SITE_DIR/logs"
