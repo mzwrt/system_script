@@ -276,6 +276,10 @@ chown -R root:"$SITE_NGINX_GROUP" "$SITE_NGINX_ROOT_DIR"
 find "$SITE_NGINX_ROOT_DIR" -type d -exec chmod 750 {} \;
 find "$SITE_NGINX_ROOT_DIR" -type f -exec chmod 640 {} \;
 
+# 7. 确保 /opt/nginx/logs 目录及其子缓存目录允许 www-data 组绝对读写（770）
+chown -R root:"$SITE_NGINX_GROUP" "$SITE_DIR/logs"
+chmod -R 770 "$SITE_DIR/logs"
+
 # =======================================================================
 # 1. 自动化下载与解压 WordPress（直接注入到你的变量路径）
 # =======================================================================
@@ -291,6 +295,21 @@ mkdir -p "$WEB_ROOT"
 # 释放到 $SITE_NGINX_ROOT_DIR 正下方，而不是多套一层名为 "wordpress" 的外壳
 tar -zxf /tmp/wordpress.tar.gz -C "$WEB_ROOT" --strip-components=1
 
+# 1. 穿透父级目录（确保 www-data 可以进入）
+chmod g+x "$SITE_NGINX_ROOT" "$SITE_NGINX_ROOT_DIR"
+
+# 2. 一键全量更改属主和属组为 www-data
+chown -R www-data:www-data "$WEB_ROOT"
+
+# 3. 规范目录权限：755（所有者可读写执行，组和其他人只读/可穿透）
+find "$WEB_ROOT" -type d -exec chmod 755 {} \;
+
+# 4. 规范文件权限：644（所有者可读写，组和其他人严格只读）
+find "$WEB_ROOT" -type f -exec chmod 644 {} \;
+
+# 5. 核心配置文件特殊保护（虽然属于 www-data，但也只给只读，防意外篡改）
+chmod 440 "$WEB_ROOT/wp-config-sample.php"
+
 # 清理临时下载包
 rm -f /tmp/wordpress.tar.gz
 
@@ -304,10 +323,6 @@ fi
 
 # 替换残留 NGINX 字段
 sed -i "s|nginx/\$nginx_version|CloudFlare|g" "$SITE_DIR/conf/fastcgi.conf"
-
-# 7. 确保 /opt/nginx/logs 目录及其子缓存目录允许 www-data 组绝对读写（770）
-chown -R root:"$SITE_NGINX_GROUP" "$SITE_DIR/logs"
-chmod -R 770 "$SITE_DIR/logs"
 
 
         # 申请通配符证书
