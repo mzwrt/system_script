@@ -241,7 +241,7 @@ find /opt/owasp/ -type f -exec chmod 640 {} \;
 
 # 精准锁定这三个核心动态库文件的属组为 www-data，并赋予 640 只读权限
 chown root:www-data /usr/lib/libmodsecurity.so*
-chmod 640 /usr/lib/libmodsecurity.so*
+chmod 644 /usr/lib/libmodsecurity.so*
 
 # 2. 允许 nginx 用户和组穿透 /opt 和 /opt/nginx 顶级目录
 chmod g+x "$SITE_OPT"
@@ -278,7 +278,7 @@ find "$SITE_NGINX_ROOT_DIR" -type f -exec chmod 640 {} \;
 
 # 7. 确保 /opt/nginx/logs 目录及其子缓存目录允许 www-data 组绝对读写（770）
 chown -R root:"$SITE_NGINX_GROUP" "$SITE_DIR/logs"
-chmod -R 770 "$SITE_DIR/logs"
+chmod -R 750 "$SITE_DIR/logs"
 
 # =======================================================================
 # 1. 自动化下载与解压 WordPress（直接注入到你的变量路径）
