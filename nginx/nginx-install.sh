@@ -856,6 +856,10 @@ if [ ! -f "$NGINX_DIR/conf/enable-php-84.conf" ]; then
   wget -q --tries=5 --waitretry=2 --no-check-certificate -O "$NGINX_DIR/conf/enable-php-84.conf" "https://raw.githubusercontent.com/mzwrt/system_script/refs/heads/main/nginx/php/enable-php-84.conf"
   chmod 600 $NGINX_DIR/conf/enable-php-84.conf
 fi
+
+mkdir -p $NGINX_DIR/logs/php
+chown -R www-data:www-data $NGINX_DIR/logs/php
+chmod 755 $NGINX_DIR/logs/php
 # php 配置文件 -- END
 
 # 日志配置
