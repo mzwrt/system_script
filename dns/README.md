@@ -374,12 +374,12 @@ blockdev --setra 256 /dev/${DISK} 2>/dev/null || true
 # 创建必要目录
 mkdir -p /etc/unbound/conf.d
 mkdir -p /var/log/unbound
-mkdir -p /var/cache/unbound
+mkdir -p /var/lib/unbound
 mkdir -p /etc/unbound/keys
 
 # 设置权限
 chown -R unbound:unbound /var/log/unbound
-chown -R unbound:unbound /var/cache/unbound
+chown -R unbound:unbound /var/lib/unbound
 chown -R root:unbound /etc/unbound/keys
 chmod 750 /etc/unbound/keys
 
@@ -392,25 +392,25 @@ unbound -V
 ```bash
 # 下载最新根服务器列表
 curl -sS https://www.internic.net/domain/named.cache \
-  -o /var/cache/unbound/root.hints
+  -o /var/lib/unbound/root.hints
 
 # 验证文件
-head -20 /var/cache/unbound/root.hints
-chown unbound:unbound /var/cache/unbound/root.hints
+head -20 /var/lib/unbound/root.hints
+chown unbound:unbound /var/lib/unbound/root.hints
 ```
 
 ### 3.3 DNSSEC 根信任锚
 
 ```bash
 # 初始化 DNSSEC 根信任锚（必须在配置前完成）
-unbound-anchor -a /var/cache/unbound/root.key -v
+unbound-anchor -a /var/lib/unbound/root.key -v
 
 # 设置权限
-chown unbound:unbound /var/cache/unbound/root.key
-chmod 640 /var/cache/unbound/root.key
+chown unbound:unbound /var/lib/unbound/root.key
+chmod 640 /var/lib/unbound/root.key
 
 # 验证
-cat /var/cache/unbound/root.key | head -5
+cat /var/lib/unbound/root.key | head -5
 ```
 
 ### 3.4 主配置文件
@@ -508,7 +508,7 @@ server:
     pidfile: "/run/unbound.pid"
     
     # 工作目录
-    directory: "/var/cache/unbound"
+    directory: "/var/lib/unbound"
     
     ###########################################################
     # 性能调优（针对 2 vCPU / 1 GB RAM）
@@ -587,7 +587,7 @@ server:
     ###########################################################
     
     # 根信任锚
-    auto-trust-anchor-file: "/var/cache/unbound/root.key"
+    auto-trust-anchor-file: "/var/lib/unbound/root.key"
     
     # DNSSEC 剥离保护
     harden-dnssec-stripped: yes
@@ -664,7 +664,7 @@ server:
     do-not-query-localhost: yes
     
     # root hints 文件
-    root-hints: "/var/cache/unbound/root.hints"
+    root-hints: "/var/lib/unbound/root.hints"
     
     ###########################################################
     # 本地区域配置（内部解析）
@@ -1000,7 +1000,7 @@ cat > /etc/audit/rules.d/cis-audit.rules << 'EOF'
 
 # Unbound DNS 配置变更（自定义）
 -w /etc/unbound/ -p wa -k dns-config
--w /var/cache/unbound/ -p wa -k dns-data
+-w /var/lib/unbound/ -p wa -k dns-data
 -w /var/log/unbound/ -p r -k dns-logs
 
 # SSH 配置
@@ -1165,7 +1165,7 @@ LSPP = p+u+g+n+acl+selinux+sha256
 # 监控路径
 # Unbound 配置（任何变更必须报警）
 /etc/unbound LSPP
-/var/cache/unbound PERMS
+/var/lib/unbound PERMS
 
 # 系统二进制
 /bin LSPP
@@ -1434,21 +1434,21 @@ dig sigfail.verteiltesysteme.net @127.0.0.1
 dig sigok.verteiltesysteme.net @127.0.0.1
 
 # 查看根信任锚状态
-unbound-anchor -a /var/cache/unbound/root.key -v
+unbound-anchor -a /var/lib/unbound/root.key -v
 
 # 手动检查 DNSSEC 链
-unbound-host -D -r /var/cache/unbound/root.hints google.com
+unbound-host -D -r /var/lib/unbound/root.hints google.com
 
 # 定期更新根信任锚（加入 cron）
 cat > /etc/cron.weekly/update-root-hints << 'EOF'
 #!/bin/bash
 # 更新根服务器列表和 DNSSEC 信任锚
 curl -sS https://www.internic.net/domain/named.cache \
-  -o /var/cache/unbound/root.hints.new && \
-  mv /var/cache/unbound/root.hints.new /var/cache/unbound/root.hints && \
-  chown unbound:unbound /var/cache/unbound/root.hints
+  -o /var/lib/unbound/root.hints.new && \
+  mv /var/lib/unbound/root.hints.new /var/lib/unbound/root.hints && \
+  chown unbound:unbound /var/lib/unbound/root.hints
 
-unbound-anchor -a /var/cache/unbound/root.key -v
+unbound-anchor -a /var/lib/unbound/root.key -v
 
 unbound-control reload
 logger -t unbound "Root hints and DNSSEC anchor updated"
@@ -1767,7 +1767,7 @@ PrivateTmp=yes
 PrivateDevices=yes
 ProtectSystem=strict
 ProtectHome=yes
-ReadWritePaths=/var/log/unbound /var/cache/unbound /run
+ReadWritePaths=/var/log/unbound /var/lib/unbound /run
 ProtectKernelTunables=yes
 ProtectKernelModules=yes
 ProtectControlGroups=yes
@@ -1936,13 +1936,13 @@ echo "=== 维护开始: $(date) ===" >> $LOG
 # 更新根服务器列表
 echo "更新 Root Hints..." >> $LOG
 curl -sS https://www.internic.net/domain/named.cache \
-  -o /var/cache/unbound/root.hints.new && \
-  mv /var/cache/unbound/root.hints.new /var/cache/unbound/root.hints
-chown unbound:unbound /var/cache/unbound/root.hints
+  -o /var/lib/unbound/root.hints.new && \
+  mv /var/lib/unbound/root.hints.new /var/lib/unbound/root.hints
+chown unbound:unbound /var/lib/unbound/root.hints
 
 # 更新 DNSSEC 信任锚
 echo "更新 DNSSEC 锚..." >> $LOG
-unbound-anchor -a /var/cache/unbound/root.key -v >> $LOG 2>&1
+unbound-anchor -a /var/lib/unbound/root.key -v >> $LOG 2>&1
 
 # 更新系统和安全补丁（PCI-DSS 6.3.3）
 echo "系统安全更新..." >> $LOG
@@ -1986,8 +1986,8 @@ mkdir -p $BACKUP_DIR
 # 打包关键配置文件
 tar -czf $BACKUP_FILE \
     /etc/unbound/ \
-    /var/cache/unbound/root.key \
-    /var/cache/unbound/root.hints \
+    /var/lib/unbound/root.key \
+    /var/lib/unbound/root.hints \
     /etc/ufw/ \
     /etc/fail2ban/ \
     /etc/audit/rules.d/ \
@@ -2100,7 +2100,7 @@ done
 
 # 检查 DNSSEC
 echo "[安全5] DNSSEC 信任锚状态:"
-unbound-anchor -a /var/cache/unbound/root.key -v 2>&1 | tail -3
+unbound-anchor -a /var/lib/unbound/root.key -v 2>&1 | tail -3
 
 # rkhunter 快速扫描
 echo "[安全6] rkhunter 快速检查:"
@@ -2257,7 +2257,7 @@ free -h && ps aux | grep unbound | grep -v grep
 # unbound-control reload
 
 # 检查并修复 DNSSEC 锚
-# unbound-anchor -a /var/cache/unbound/root.key -f -v
+# unbound-anchor -a /var/lib/unbound/root.key -f -v
 
 # 恢复默认配置（如严重损坏）
 # cp /etc/unbound/unbound.conf.bak /etc/unbound/unbound.conf
@@ -2279,8 +2279,8 @@ free -h && ps aux | grep unbound | grep -v grep
   └── acl.conf                      客户端访问控制
 /etc/unbound/keys/                  远程控制证书
 /etc/unbound/tls/                   DoT TLS 证书
-/var/cache/unbound/root.key         DNSSEC 根锚
-/var/cache/unbound/root.hints       根服务器列表
+/var/lib/unbound/root.key         DNSSEC 根锚
+/var/lib/unbound/root.hints       根服务器列表
 /var/log/unbound/unbound.log        DNS 运行日志
 /var/log/unbound/latency.log        延迟监控日志
 
