@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SRC="/opt/nginx/ssl/ihccc.com"
+SRC="/opt/nginx/ssl/mzwrt.com"
 DST="/etc/unbound/tls"
 
 CERT="${SRC}/fullchain.pem"
