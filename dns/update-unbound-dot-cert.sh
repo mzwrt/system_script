@@ -16,7 +16,7 @@ mkdir -p "$DST"
 cp -f "$CERT" "${DST}/cert.pem"
 cp -f "$KEY" "${DST}/key.pem"
 
-chown unbound:unbound "${DST}/cert.pem" "${DST}/key.pem"
+chown root:unbound "${DST}/cert.pem" "${DST}/key.pem"
 
 chmod 644 "${DST}/cert.pem"
 chmod 600 "${DST}/key.pem"
