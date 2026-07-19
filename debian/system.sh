@@ -69,7 +69,7 @@ wget -O /etc/sysctl.d/90-custom.conf https://raw.githubusercontent.com/mzwrt/sys
 
 # 加载新的 sysctl 配置
 echo "正在应用新的 sysctl 配置..."
-sysctl --system
+/usr/sbin/sysctl --system
 
 # ==========================
 # 3. 系统更新及安装软件
@@ -89,8 +89,8 @@ apt install vim curl wget ufw sudo lsof htop -y
 # 设置语言为中文简体
 echo "正在设置系统语言为中文简体..."
 sed -i '/zh_CN.UTF-8 UTF-8/s/^# //g' /etc/locale.gen
-locale-gen
-update-locale LANG=zh_CN.UTF-8 LANGUAGE=zh_CN:zh
+/usr/sbin/locale-gen locale-gen
+/usr/sbin/update-locale update-locale LANG=zh_CN.UTF-8 LANGUAGE=zh_CN:zh
 
 # 设置时区为中国
 echo "正在设置时区为中国..."
@@ -130,7 +130,7 @@ chmod 600 "$AUTHORIZED_KEYS"
 echo "正在为用户 $NEW_USER 自动添加 sudo 权限..."
 if ! grep -q "^$NEW_USER" /etc/sudoers; then
     SUDOERS_LINE="$NEW_USER ALL=(ALL) NOPASSWD:ALL"
-    echo "$SUDOERS_LINE" | EDITOR='tee -a' visudo > /dev/null
+    echo "$SUDOERS_LINE" | EDITOR='tee -a' /usr/sbin/visudo > /dev/null
     echo "已成功为 $NEW_USER 添加 sudo 权限。"
 else
     echo "$NEW_USER 已经具有 sudo 权限，无需修改。"
