@@ -84,7 +84,7 @@ echo "正在升级已安装的软件包..."
 apt upgrade -y
 
 echo "正在安装常用软件包..."
-apt install vim curl wget ufw sudo lsof htop -y
+apt install vim curl wget ufw sudo lsof htop sscg -y
 
 # 设置语言为中文简体
 echo "正在设置系统语言为中文简体..."
@@ -226,9 +226,9 @@ EOF
 
             apt update
             apt install -t ${VERSION_CODENAME}-backports cockpit -y
-            wget -q https://github.com/45Drives/cockpit-navigator/releases/download/v0.5.10/cockpit-navigator_0.5.10-1focal_all.deb
-            apt install ./cockpit-navigator_0.5.10-1focal_all.deb -y
-            rm -f cockpit-navigator_0.5.10-1focal_all.deb
+            wget -q https://github.com/45Drives/cockpit-navigator/releases/download/v0.6.1/cockpit-navigator_0.6.1-1focal_all.deb
+            apt install ./cockpit-navigator_0.6.1-1focal_all.deb -y
+            rm -f cockpit-navigator_0.6.1-1focal_all.deb
 
             COCKPIT_PORT=9090
 
